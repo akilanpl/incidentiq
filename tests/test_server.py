@@ -36,7 +36,10 @@ def test_ask_validation_and_bad_time():
 
 def test_resolve_preference_patterns_demo_index():
     c = client()
-    assert c.post("/api/resolve", json={"service": "s", "engineer": "e", "summary": "x", "root_cause": "y", "fix": "z"}).json() == {"retained": 1}
+    resolved = c.post("/api/resolve", json={"service": "s", "engineer": "e", "summary": "x", "root_cause": "y", "fix": "z", "outcome": "error rate recovered", "verified": True})
+    assert resolved.status_code == 200
+    assert resolved.json()["retained"] == 1
+    assert resolved.json()["incident_id"].startswith("INC-LIVE-")
     assert c.post("/api/preference", json={"engineer": "e", "text": "rollback-first please"}).json() == {"retained": 1}
     assert "answer" in c.post("/api/patterns", json={"question": "what repeats?"}).json()
     assert c.get("/api/demo").json()["alerts"]

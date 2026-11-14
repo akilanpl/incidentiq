@@ -1,0 +1,58 @@
+{
+  "status": "PASS real Cloud recalls verify separate intake/advice/confirmed resolution",
+  "classes": {
+    "incident_intake": {
+      "returned": 6,
+      "verification_status": "unverified",
+      "document_ids": [
+        "IQ-eeb85f7dc8c5-intake"
+      ],
+      "source_ids": [
+        "4c3dd393-74cb-49ba-b848-5ba431e6dbe4",
+        "1b008eff-f985-4ca3-9191-7892396e4dce",
+        "ed3c5ca3-73ed-495d-8aca-8f31bdac1eac",
+        "7903515a-409b-4eb0-9231-55891cac283e",
+        "6f20fd02-c8d2-4be2-98f6-24eee52dadfe",
+        "b01f849c-cb0f-4acd-9561-aef53a733ea9"
+      ]
+    },
+    "investigation_advice": {
+      "returned": 15,
+      "verification_status": "unverified",
+      "document_ids": [
+        "IQ-eeb85f7dc8c5-advice"
+      ],
+      "source_ids": [
+        "cba07221-951b-4af6-89b8-5f99623ab8df",
+        "3ec08b68-3575-419a-b711-6210246896b1",
+        "992141e4-7924-4dcf-938a-7df0930deb4f",
+        "ae51e26b-57c1-4c48-9fe0-c9d907769f50",
+        "9ede7e79-6fc9-4116-befd-8f53d821c99c",
+        "be10104c-6a64-4e99-849c-a460b2a74dd5",
+        "2d723bb6-2e7c-4d07-9833-716300c3be40",
+        "60567aca-782f-4764-894a-36e7de3e679b",
+        "259820e9-4522-46d2-b04c-8bb13b21c1de",
+        "082140d4-66d0-4c28-9505-073d8d86d3b0",
+        "2d16f213-87fb-4d47-8913-b3f9221d5369",
+        "870fbb27-3876-458e-b95d-76aef76caa8e",
+        "b0633cfd-9f94-4ed2-8fe9-08ef28bc9b13",
+        "a7a4bad8-5e62-4dee-a80d-4fa68a1010a4",
+        "6b3e93f5-4d1a-4b0d-b7b9-94ff28cc228f"
+      ]
+    },
+    "incident": {
+      "returned": 5,
+      "verification_status": "verified",
+      "document_ids": [
+        "IQ-eeb85f7dc8c5"
+      ],
+      "source_ids": [
+        "d86642dd-b0e4-4583-8498-7fcf97ec4f1c",
+        "14683fdc-bbcc-4bbc-a0c3-213439ad1907",
+        "d481a277-3031-4ae0-8859-7e6226820f0f",
+        "f9ebc8de-3122-4cea-a1a4-6092e976e89d",
+        "9544e1c0-6855-4a57-bb8e-1bb778bdc7b1"
+      ]
+    }
+  }
+}

@@ -1,0 +1,58 @@
+{
+  "status": "PASS unique marker and terminal error in the same actual image",
+  "model": "qwen/qwen3.8-27b",
+  "response": {
+    "incident_summary": "Production probe for probe-orders indicates a database pool timeout after 30000ms, with the pool fully saturated (40 active connections) and 112 requests waiting.",
+    "service": "probe-orders",
+    "environment": "production",
+    "severity": "",
+    "error_signatures": [
+      "INCIDENTIQ-VISION-PROBE-20261114",
+      "ERROR DB_POOL_TIMEOUT after 30000ms",
+      "pool active=40 idle=0 waiting=112"
+    ],
+    "observed_symptoms": [
+      "Database pool timeout observed after 30000ms",
+      "Database connection pool is saturated with 40 active connections",
+      "No idle connections available (idle=0)",
+      "112 requests are waiting for a database connection"
+    ],
+    "affected_components": [
+      "probe-orders",
+      "database connection pool"
+    ],
+    "possible_dependencies": [
+      "database instance"
+    ],
+    "recent_changes": [],
+    "known_facts": [
+      "Probe marker INCIDENTIQ-VISION-PROBE-20261114 is visible in the evidence",
+      "The error occurred in the production environment",
+      "The timeout duration is exactly 30000ms",
+      "The connection pool has a maximum capacity of at least 40"
+    ],
+    "suspected_causes": [
+      "Database connection pool exhaustion",
+      "Slow database queries holding connections",
+      "Database instance performance degradation",
+      "Connection leak in the application"
+    ],
+    "missing_information": [
+      "Specific database instance or cluster name",
+      "Timestamp of the incident",
+      "Recent deployment or configuration changes",
+      "Database query performance metrics",
+      "Application logs showing which queries are holding connections"
+    ],
+    "retrieval_queries": [
+      "probe-orders ERROR DB_POOL_TIMEOUT after 30000ms production",
+      "database connection pool exhaustion active=40 idle=0 waiting=112",
+      "probe-orders database dependency slow queries connection leak incident"
+    ]
+  },
+  "usage": {
+    "prompt_tokens": 2141,
+    "completion_tokens": 506,
+    "total_tokens": 2647
+  }
+}

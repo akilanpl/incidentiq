@@ -1,0 +1,66 @@
+{
+  "timestamp": "2026-11-14T06:33:27.728409+00:00",
+  "groq": "PASS real models listing and JSON understanding inference",
+  "preferred_model_available": true,
+  "model": "openai/gpt-oss-120b",
+  "fallback_model": "openai/gpt-oss-20b",
+  "vision_candidate_available": true,
+  "understanding": {
+    "incident_summary": "Database connection timeout observed in the orders service after a recent deployment.",
+    "service": "orders",
+    "environment": "production",
+    "severity": "SEV2",
+    "error_signatures": [
+      "database connection timed out"
+    ],
+    "observed_symptoms": [
+      "ERROR orders database connection timed out",
+      "connection pool active=40 idle=0"
+    ],
+    "affected_components": [
+      "orders service",
+      "orders database"
+    ],
+    "possible_dependencies": [
+      "database",
+      "connection pool"
+    ],
+    "recent_changes": [
+      "deployment performed shortly before the error"
+    ],
+    "known_facts": [
+      "Error message indicates a timeout when connecting to the orders database.",
+      "Connection pool shows 40 active connections and 0 idle connections."
+    ],
+    "suspected_causes": [
+      "Configuration change in the recent deployment affecting database connectivity",
+      "Network latency or outage affecting database access",
+      "Database overload leading to connection timeouts"
+    ],
+    "missing_information": [
+      "Exact timestamp of the incident",
+      "Deployment version or commit identifier",
+      "Full stack trace or log excerpts surrounding the error",
+      "Database health metrics at the time of the incident",
+      "Network status and latency measurements"
+    ],
+    "retrieval_queries": [
+      "orders service SEV2 database connection timeout after recent deployment",
+      "common causes of connection pool exhaustion and timeouts in production environments"
+    ]
+  },
+  "fallback_inference": "PASS real JSON understanding",
+  "available_model_ids": [
+    "allam-2-7b",
+    "canopylabs/orpheus-arabic-saudi",
+    "canopylabs/orpheus-v1-english",
+    "meta-llama/llama-prompt-guard-2-22m",
+    "meta-llama/llama-prompt-guard-2-86m",
+    "openai/gpt-oss-120b",
+    "openai/gpt-oss-20b",
+    "openai/gpt-oss-safeguard-20b",
+    "qwen/qwen3.8-27b",
+    "whisper-large-v3",
+    "whisper-large-v3-turbo"
+  ]
+}

@@ -1,0 +1,85 @@
+{
+  "model": "qwen/qwen3.8-27b",
+  "source": "groq",
+  "understanding": {
+    "incident_summary": "Production incident for probe-orders showing a database pool timeout after 30000ms with pool saturation (active=40, idle=0, waiting=112).",
+    "service": "probe-orders",
+    "environment": "production",
+    "severity": "SEV2",
+    "error_signatures": [
+      "INCIDENTIQ-VISION-PROBE-20261114",
+      "ERROR DB_POOL_TIMEOUT after 30000ms",
+      "pool active=40 idle=0 waiting=112"
+    ],
+    "observed_symptoms": [
+      "Database pool timeout error observed after 30000ms",
+      "Connection pool fully saturated with 40 active connections",
+      "Zero idle connections available in the pool",
+      "112 requests waiting for a database connection"
+    ],
+    "affected_components": [
+      "probe-orders",
+      "database connection pool"
+    ],
+    "possible_dependencies": [
+      "database backend",
+      "connection pool manager"
+    ],
+    "recent_changes": [],
+    "known_facts": [
+      "Incident is in production environment",
+      "Severity is SEV2",
+      "Probe marker INCIDENTIQ-VISION-PROBE-20261114 is visible",
+      "Timeout duration is 30000ms",
+      "Pool state shows active=40, idle=0, waiting=112"
+    ],
+    "suspected_causes": [
+      "Database connection pool exhaustion",
+      "Slow database queries holding connections",
+      "Connection leak preventing pool release"
+    ],
+    "missing_information": [
+      "Specific database instance or cluster details",
+      "Timestamp of incident start",
+      "Recent deployment or configuration changes",
+      "Query performance metrics or slow query logs",
+      "Network latency between service and database",
+      "Historical pool utilization trends"
+    ],
+    "retrieval_queries": [
+      "probe-orders DB_POOL_TIMEOUT 30000ms pool active=40 idle=0 waiting=112",
+      "database connection pool exhaustion saturation timeout production incident",
+      "probe-orders database dependency slow queries connection leak previous resolutions"
+    ]
+  },
+  "usage": {
+    "status": "connected",
+    "last_operation": "vision_inference",
+    "last_success_at": "2026-11-14T08:01:26.549331+00:00",
+    "last_duration_ms": 1579.3,
+    "error": null,
+    "last_recall_ms": null,
+    "last_retention_at": null,
+    "last_inference_status": "success",
+    "last_inference_ms": 1579.3,
+    "operation_counts": {
+      "vision_inference": 1
+    },
+    "latest_request_usage": {
+      "prompt_tokens": 2151,
+      "completion_tokens": 527,
+      "total_tokens": 2678
+    },
+    "app_observed_tokens": 2678,
+    "rate_limit_headers": {
+      "x-ratelimit-limit-requests": "1000",
+      "x-ratelimit-limit-tokens": "8000",
+      "x-ratelimit-remaining-requests": "999",
+      "x-ratelimit-remaining-tokens": "5131",
+      "x-ratelimit-reset-requests": "1m26.4s",
+      "x-ratelimit-reset-tokens": "21.517s"
+    },
+    "usage_scope": "App-observed calls in this process; response rate limits may be shared at project/organisation scope; not account credit balance",
+    "checked_at": "2026-11-14T08:01:26.549331+00:00"
+  }
+}

@@ -1,300 +1,179 @@
-# Recurrence
+# IncidentIQ
 
-**The on-call agent that remembers every outage.**
+**Operational intelligence that learns from every incident.**
 
-[![tests](https://github.com/francisreubenr-rvu/recurrence/actions/workflows/tests.yml/badge.svg)](https://github.com/francisreubenr-rvu/recurrence/actions/workflows/tests.yml)
-[![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+Every incident leaves knowledge. IncidentIQ remembers.
 
-It is 7:47 PM, UPI peak. `payments-api` is throwing 19% 5xx and HikariPool is exhausted. The engineer on call joined
-in September. A generic assistant says what every runbook says: restart the pods, scale out. Both of those made this
-exact outage *worse* three weeks ago.
+A local engineering workspace built on [Recurrence](https://github.com/francisreubenr-rvu/recurrence),
+FastAPI, Groq and the official `hindsight-client==1.2.0`. Original authors: Aryan Dubey, Francis Reuben R,
+Gopreeth Saharsh and Rohith AD. The original [MIT LICENSE](LICENSE) is unchanged. The original README is
+preserved in [docs/RECURRENCE_UPSTREAM.md](docs/RECURRENCE_UPSTREAM.md).
 
-Recurrence is an SRE incident assistant for **Tamarind Pay** (a fictional payments company; all data is synthetic).
-It keeps the team's incident history in [Hindsight](https://github.com/vectorize-io/hindsight) long-term memory. When a
-page comes in, it recalls the incidents that look like this one, the fixes that worked, the fixes that did **not**
-work, and how this particular engineer likes to be helped. Then a Groq-hosted model answers with that memory in context.
-When the page is resolved, the real outcome goes back into memory, so the next page starts smarter.
-
-- Hindsight: [github.com/vectorize-io/hindsight](https://github.com/vectorize-io/hindsight)
-- Hindsight docs: [hindsight.vectorize.io](https://hindsight.vectorize.io/)
-- What agent memory is: [vectorize.io/what-is-agent-memory](https://vectorize.io/what-is-agent-memory)
-
-> Status: prototype. The plumbing is tested offline (35 pytest tests, fake memory, template answers).
-> **No live Hindsight or Groq call has been verified yet.** See [Limitations](#limitations).
-
----
-
-## How Hindsight is used
-
-One memory bank per team (`recurrence-tamarind-sre`). Tags scope every memory: `service:<name>`,
-`engineer:<slug>`, `kind:incident|dead-end|preference|service|advice`. All calls go through the official
-`hindsight-client` SDK in [`recurrence/memory.py`](recurrence/memory.py).
-
-### create_bank: a skeptical, literal memory
-
-```python
-client.create_bank(
-    bank_id="recurrence-tamarind-sre",
-    name="Recurrence on-call memory",
-    mission="I am the on-call memory for Tamarind Pay's SRE team. I remember every past incident: "
-            "the alert, the logs, the root cause, the fix that worked, and the fixes that did NOT work...",
-    disposition={"skepticism": 4, "literalism": 4, "empathy": 2},   # 1-5 scale
-)
-```
-
-### retain: incidents, dead ends, preferences, and the agent's own advice
-
-Each past incident becomes two memories: the narrative, and a separate "dead end" so that *what not to do* is
-recallable on its own ([`recurrence/seed.py`](recurrence/seed.py)).
-
-```python
-client.retain_batch(bank_id=BANK, items=[
-    {
-        "content": "Incident INC-2087 (SEV1) on payments-api ... Root cause: ledger-svc 4.21.0 migration created an "
-                   "index without CONCURRENTLY ... Fix that worked: pg_terminate_backend, roll back ledger-svc ...",
-        "timestamp": "2026-10-15T19:55:00+05:30",          # when it happened, so recall can reason about time
-        "context": "resolved incident postmortem for payments-api",
-        "document_id": "INC-2087",
-        "tags": ["service:payments-api", "engineer:arjun-mehta", "kind:incident"],
-        "metadata": {"incident_id": "INC-2087", "service": "payments-api", "kind": "incident"},
-    },
-    {
-        "content": "During INC-2087 on payments-api this did NOT work and should not be repeated: restarting "
-                   "payments-api pods ... scaling the HPA made PgBouncer saturation worse.",
-        "document_id": "INC-2087-dead-end",
-        "tags": ["service:payments-api", "engineer:arjun-mehta", "kind:dead-end"],
-        # ...
-    },
-])
-
-# After every answer, the advice itself is retained, so the next page knows what was already tried.
-client.retain(bank_id=BANK, content=f"Recurrence advised {engineer} on a {service} page ... Advice given: ...",
-              context="advice given by the on-call agent (not yet confirmed as the fix)",
-              timestamp=now.isoformat(), tags=[f"service:{service}", f"engineer:{slug}", "kind:advice"])
-```
-
-### recall: similar incidents, then this engineer's preferences
-
-```python
-incidents = client.recall(bank_id=BANK, query=f"{service}: {alert}",
-                          max_tokens=2500, budget="mid", tags_match="any",
-                          query_timestamp=now.isoformat())     # "weeks ago" is relative to the page
-
-prefs = client.recall(bank_id=BANK,
-                      query=f"How does {engineer} prefer to receive help during incidents?",
-                      tags=[f"engineer:{slug}", "kind:preference"], tags_match="all_strict",
-                      max_tokens=600, query_timestamp=now.isoformat())
-```
-
-Both result lists go into the system prompt with a "N days ago" label. The model can also call `recall_memory`
-(scoped by `service:` tag) as a tool when it wants more.
-
-### reflect: patterns across the whole history
-
-Exposed to the model as the `reflect_on_history` tool and to people via `POST /api/patterns`:
-
-```python
-answer = client.reflect(bank_id=BANK,
-                        query="What pattern links ledger-svc deploys to payments-api errors?",
-                        budget="low")
-print(answer.text)
-```
-
----
-
-## Architecture
-
-```mermaid
-flowchart LR
-    Pager["Alert / page<br/>(alert text, service, engineer)"] --> UI["Console<br/>app/static/index.html"]
-    UI -->|POST /api/ask| API["FastAPI<br/>app/server.py"]
-    API --> Agent["RecurrenceAgent<br/>recurrence/agent.py"]
-
-    subgraph Memory["Hindsight (Cloud or self-hosted)"]
-        Bank[("Bank: recurrence-tamarind-sre<br/>incidents · dead ends · preferences · services · advice")]
-    end
-
-    Agent -->|"1. recall (similar incidents)"| Bank
-    Agent -->|"2. recall (engineer prefs, tag-scoped)"| Bank
-    Agent -->|"3. chat + tools"| Groq["Groq<br/>openai/gpt-oss-120b<br/>fallback qwen/qwen3-32b"]
-    Groq -.->|"tool: recall_memory"| Bank
-    Groq -.->|"tool: reflect_on_history"| Bank
-    Agent -->|"4. retain (advice given)"| Bank
-    UI -->|"POST /api/resolve (root cause, fix, what failed)"| API
-    API -->|retain_batch| Bank
-    Seed["recurrence/seed.py<br/>data/incidents.json"] -->|create_bank + retain_batch| Bank
-```
-
-Failure handling: if Hindsight is down the page still gets an answer (errors are listed in `memory_errors`);
-if Groq is down the recalled memories are still returned. Groq `tool_use_failed` (HTTP 400) falls back to the second
-model, then to a no-tools answer; malformed tool arguments and tool exceptions are returned to the model as tool
-output instead of crashing ([`recurrence/llm.py`](recurrence/llm.py)).
-
----
-
-## Repository layout
-
-| Path | What is in it |
-|---|---|
-| `recurrence/` | Agent, Hindsight client wrapper, Groq client, config, seed script |
-| `app/` | FastAPI server and the single-page console (`app/static/index.html`) |
-| `data/incidents.json` | Synthetic incident history: 12 incidents, dead ends, preferences, service facts |
-| `evals/` | Before/after evaluation (memory off vs on) and its output |
-| `scripts/` | Learning curve from an empty bank (interaction 1 to 5) |
-| `tests/` | 35 pytest tests; no network or keys needed |
-| `docs/` | Offline plumbing-run log and internal submission notes |
-| `content/` | Article, LinkedIn, and Reddit drafts (unpublished; not part of the app) |
-| `video/` | Demo video script, shot list, thumbnail brief, upload copy |
-| `run.sh` | Short commands for test, offline, seed, serve, eval, curve |
-
----
-
-## Setup
-
-Python 3.11+.
+## Run this checkout
 
 ```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-cp .env.example .env
+./run.sh serve
 ```
 
-### Option A: Hindsight Cloud
+Open **http://127.0.0.1:8000** and sign in with the locally configured operator. The helper selects `.venv/bin/python`
+and binds the server to localhost. Stop an existing server before starting another on port 8000.
 
-Create a key in the Hindsight Cloud UI, then in `.env`:
-
-```
-HINDSIGHT_API_URL=https://api.hindsight.vectorize.io
-HINDSIGHT_API_KEY=<your Hindsight key>
-GROQ_API_KEY=<your Groq key>
-```
-
-### Option B: self-host Hindsight with Docker
-
-Hindsight needs its own LLM for fact extraction and reflect; this compose file points it at Groq.
-
-```
-GROQ_API_KEY=<your Groq key>
-HINDSIGHT_API_URL=http://localhost:8888
-HINDSIGHT_API_LLM_PROVIDER=groq
-HINDSIGHT_API_LLM_API_KEY=<your Groq key>
-HINDSIGHT_API_LLM_MODEL=openai/gpt-oss-120b
-```
+For a fresh installation only, use Python 3.11+:
 
 ```bash
-docker compose up -d          # API on http://localhost:8888, UI on http://localhost:9999
+python3.12 -m venv .venv
+.venv/bin/pip install -r requirements.txt
+# Only if .env does not exist: copy .env.example to .env, then enter API keys locally.
+.venv/bin/python -m scripts.setup_operator
+./run.sh serve
 ```
 
-### No keys at all (plumbing only)
+**Never overwrite an existing `.env`.** API settings remain there. The operator setup helper writes a separate,
+Git-ignored `.env.auth` with mode `0600`, using `getpass`, a unique salt, `hashlib.scrypt`, and a random session secret.
+It stores no plaintext password. Restart after configuration changes. No default username/password is supplied.
+
+Authentication configuration: `INCIDENTIQ_AUTH_ENABLED`, `INCIDENTIQ_USERNAME`, `INCIDENTIQ_PASSWORD_SALT`,
+`INCIDENTIQ_PASSWORD_HASH`, `INCIDENTIQ_SESSION_SECRET`. Live mode defaults to authentication enabled and fails
+closed until setup is complete. Sessions use signed HttpOnly, SameSite=Strict cookies with 8-hour expiry and constant-time
+signature checks. Logout revocations persist locally across restarts. Login attempts are limited to five per minute
+per local client. Secure cookies are disabled because this MVP runs on localhost HTTP. This is not enterprise RBAC.
+
+## Workspace
+
+The dark, responsive three-panel interface includes dashboard metrics, recent investigations, searchable/filterable
+history, memory search and reflection, analytics, local settings, an operator menu, collapsible sidebar and mobile
+inspector. Metrics come from the real local history store. Provider indicators come from observed API operations;
+bank/model-list connectivity is distinguished from successful inference. Unknown measurements remain unknown.
+
+Every saved investigation includes its sanitised submission, structured understanding, source memories and IDs,
+retrieval events, measured stage timings, public AI conclusions/recommendations, retention status and engineer-feedback
+history. Clicking a saved investigation reopens that actual record. Refresh and server restarts preserve history.
+Old pre-upgrade reports are not fabricated into transcripts; local history starts with requests recorded by this version.
+
+## Investigation pipeline
+
+1. Redact common text secrets; validate optional screenshot content/size and require operator review of its pixels.
+2. Groq extracts structured facts, hypotheses, signatures and missing evidence before retrieval. Screenshots and text
+   use one combined vision-understanding pass when an image is supplied.
+3. Up to three distinct signature/symptom/dependency queries search genuine Hindsight Cloud memory. SDK operations
+   remain on the dedicated execution thread; no unsafe parallel SDK/event-loop calls were introduced.
+4. Merge duplicate source IDs/documents while preserving original fact IDs. Bound the evidence context to 11,000
+   serialised characters. Service/environment compatibility, source verification and age are checked. Verified
+   cross-service incidents can be used as explicitly labelled analogies, never proof of the current root cause.
+5. Groq produces a schema-validated investigation with real source citations, ranked hypotheses, uncertainty,
+   diagnostic checks, expected observations, remediation risks and resolution checks. Invalid reports receive one
+   bounded repair attempt; unsupported citations or unavailable inference are not retained as learning.
+6. **Only after recall and reasoning**, synchronously retain separate unverified `kind:incident_intake` and
+   `kind:investigation_advice` records in Hindsight. Disabling historical recall does not disable classified learning.
+7. Engineer-approved resolution is retained separately using the existing `kind:incident`, `status:verified`,
+   `source:engineer-feedback` classification, with failed approaches separately recorded as `kind:dead-end`.
+
+Intake and advice are excluded from confirmed diagnostic evidence. Verification is engineer attestation, not an
+independent telemetry assertion. Current incidents stay open until the engineer explicitly verifies recovery.
+
+All new investigations bypass evidence caching. Repeated workspace memory searches can use a bank/workspace-scoped
+60-second cache; **Force fresh recall** bypasses it. Only source evidence is cached, never final diagnoses. Verified
+resolution writes invalidate retrieval caches. Query events distinguish real API calls from cached evidence.
+
+## Screenshots
+
+Up to three PNG, JPEG and WebP images are supported: 5 MB each, 10 MB aggregate and 20 million pixels each. MIME/magic/content are checked with Pillow;
+embedded metadata is removed before processing. Images are processed in memory and are not stored in local history
+or Hindsight. Only extracted, redacted structured evidence and MIME/size metadata are retained.
+
+`qwen/qwen3.8-27b` is documented for vision by [Groq](https://console.groq.com/docs/vision), was available in the
+account, and passed a real synthetic screenshot request. The complete screenshot → Hindsight → Groq → learning
+workflow also passed through the authenticated HTTP API and browser upload control.
+
+Pixel secrets cannot be automatically redacted: the operator must review screenshots before uploading. Text secret
+redaction is best-effort pattern matching, not comprehensive secret detection.
+
+## Tests and live verification
 
 ```bash
-./run.sh test                 # 35 tests, fake memory + template LLM, no network
-./run.sh offline              # console at http://localhost:8000 with fake memory
+./run.sh test
+./run.sh smoke --learning-loop
+.venv/bin/python -m compileall -q .
+node --check app/static/workspace.js
+node --check app/static/login.js
 ```
 
-`FakeMemory` and `OfflineLLM` are clearly labelled test stand-ins. Their output is prefixed
-`[offline template, no LLM]` / `[offline reflect stand-in]` and must never be shown as Hindsight or Groq results.
+The smoke command makes real API calls and writes labelled synthetic Cloud memories. It verifies the preferred
+model against the account model list and selects an available fallback ID. In this account, real JSON inference passed
+with `openai/gpt-oss-120b` and fallback `openai/gpt-oss-20b`. `requirements.lock` records installed versions.
 
-## Seed and run
+Evidence files under `docs/` include:
 
-```bash
-./run.sh seed                 # create_bank + retain 31 memories (12 incidents, dead ends, 5 preferences, service facts)
-./run.sh serve                # http://localhost:8000
-./run.sh eval                 # memory OFF vs ON on 5 demo alerts -> evals/results_hindsight_groq.json
-./run.sh curve                # interaction 1 -> 5 from an empty bank (bank <id>-curve)
-```
+- `upgrade_gate.json`: real Incident A → confirmed resolution → differently worded, different-service Incident B with citations.
+- `upgrade_image_e2e.json`: real combined screenshot/text investigation and verified outcome.
+- `vision_verification.json`: real multimodal request and extracted error schema.
+- `upgrade_classification.json`: actual Cloud recall confirming intake/advice/unverified versus resolution/verified metadata.
+- `upgrade_restart.json`: actual server restart preserves history and confirmed Cloud memory; real cache/force-refresh results.
+- `upgrade_final_live.json`: new cross-service investigation after restart, real citations, new classified retention.
+- `live_verification.json`: official Cloud retain/semantic recall and fresh-client learning loop.
 
-Hindsight extracts facts asynchronously on its side; give it a short while after seeding before the first recall.
+These tests use explicitly synthetic incidents. They are not real production outcomes or diagnostic-accuracy benchmarks.
 
----
+## Storage and API
 
-## Demo flow (5 steps)
+`data/investigations.json` is the small atomic JSON history store, protected by the local operator session. Runtime
+history, revocations, auth configuration and API credentials are Git-ignored. Atomic writes use temporary files,
+fsync and replace, with a process lock. Run one application process; multi-process shared-file history is unsupported.
+The persistent operational memory remains in Hindsight Cloud bank `incidentiq-sre`, not in this JSON history file.
 
-All times IST. The console's `now` field replays "today" as **Mon 9 Nov 2026, 7:47 PM** so the demo is repeatable.
+Auth: `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/session`.
+Protected workspace: `/api/dashboard`, `/api/providers`, `/api/providers/check`, `/api/investigations`,
+`/api/investigations/{id}`, `/api/memory/search`.
+Existing `/api/ask`, `/api/resolve`, `/api/preference`, `/api/patterns` remain available and protected.
+`/api/ask` accepts optional `image_data` (base64 data URL) and `image_reviewed:true`. `/api/resolve` accepts
+`conversation_id`, confirmed cause/fix/outcome and `verified:true`; feedback scope must match its saved investigation.
 
-1. **Memory off fails.** Paste DEMO-1 (`payments-api` 5xx 19.2%, `HikariPool-1 - Connection is not available`,
-   `still waiting for AccessExclusiveLock ... database ledger`), engineer *Arjun Mehta*, toggle memory **off**.
-   The answer is the generic runbook: check deploys, restart pods, scale out. Restart and scale-out are exactly the
-   two moves that made this outage worse before.
-2. **Memory on recalls an incident from weeks earlier.** Toggle memory **on**, same page. Recurrence recalls
-   **INC-2087** (15 Oct, 24 days earlier) and **INC-2041** (24 Sep): a `ledger-svc` migration holding a lock on
-   `ledger.entries` during evening peak. It leads with: find the blocking PID in `pg_stat_activity`,
-   `pg_terminate_backend` it, roll back `ledger-svc`.
-3. **A dead-end fix is avoided.** The answer says explicitly: do **not** restart `payments-api` pods (bought ~6-8
-   minutes, then the pool refilled) and do **not** scale the HPA (more pods, more connections, PgBouncer saturates).
-   In INC-2087 those two steps cost about 20 minutes.
-4. **A preference is learned.** Arjun saves a preference in the console: *"step-by-step please, with how to verify each
-   step"* (`POST /api/preference` → `retain` with `engineer:arjun-mehta`, `kind:preference`). Ask again: the answer is
-   now numbered steps with a verify check after each. Switch the engineer to *Priya Raman* and the same page comes back
-   rollback-first with copy-pasteable commands, because that is her stored preference.
-5. **Close the loop.** Fill "resolve" with the real root cause, fix and what did not work (`POST /api/resolve` →
-   `retain_batch`). Then ask *"What pattern links ledger-svc deploys to payments-api errors?"* through
-   `POST /api/patterns` (`reflect`; there is no console button for it yet): the bank now has three occurrences to
-   reason over.
+Offline mode (`./run.sh offline`) is explicitly test-only, with FakeMemory and deterministic templates. It never
+counts as Cloud/Groq verification. Live mode does not silently substitute offline providers.
 
-`python -m scripts.learning_curve` shows the same arc from an empty bank: interaction 1 recalls nothing and gives
-generic advice; by interaction 5 it recalls the earlier outages, the failed fixes and the stated preference.
+No production commands, external identity service, multi-tenant RBAC or enterprise compliance claims are included.
+The optional Prometheus adapter queries configured read-only metrics; without a real endpoint and queries, recovery
+remains ENGINEER_ATTESTED and telemetry is TELEMETRY_NOT_CONFIGURED. Keep the app on localhost and review every remediation.
 
----
+## Final remediation
 
-## Tests and evaluation
+The app now supports up to three images (5 MB each, 10 MB total), mandatory sanitised-evidence approval, local admin/responder/viewer roles and an optional read-only Prometheus verifier. Existing operator credentials are migrated; manage additional users in Settings. Independent recovery is not claimed without real configured metrics. See docs/RELEASE_TEST_REPORT.md for release acceptance evidence and limitations.
 
-```bash
-python -m pytest -q
-```
 
-- `tests/test_memory_sdk.py`: `create_autospec(Hindsight)` checks every SDK call in `memory.py` against the real
-  `hindsight-client` 1.2.0 signatures, and builds the SDK's own `MemoryItem` models from the seed data.
-- `tests/test_fake_memory.py`: the offline stand-in (tag filters, `all`/`any`, empty queries, reflect label).
-- `tests/test_agent.py`: memory on vs off, memory down, LLM down, resolve, preference learned then used.
-- `tests/test_llm.py`: Groq error handling with a mocked client: `tool_use_failed` → fallback model → no-tools
-  answer, connection errors, malformed tool args, tool exceptions, max tool rounds, `<think>` stripping.
-- `tests/test_server.py`: FastAPI `TestClient` on `/health`, `/api/ask` (memory on/off), validation, other routes.
+## Local access and evidence review
 
-`python -m evals.before_after` runs five demo alerts with memory off and on and reports, per alert, whether the
-expected incident ID appears in the recalled memories and in the answer. `python -m scripts.learning_curve` walks one
-engineer through five pages from an empty bank, retaining the real outcome after each.
+On an unconfigured installation, the first-run page creates an administrator without a default password.
+Existing operator credentials migrate to ignored `data/users.json`; Settings lets admins create local accounts.
+Admin manages users and all features; responder investigates and records feedback; viewer is read-only.
+Backend authorization enforces these roles. The terminal setup helper resets its named account and rotates the
+session secret while preserving other users. Do not run multiple application processes against these local files.
 
-[`docs/offline_run.txt`](docs/offline_run.txt) holds the output of the offline seed, learning curve and eval. It is a
-plumbing check with fake memory and a template LLM, **not** a result. No live-run numbers are published in this
-repository yet.
+Before external processing, `/api/evidence/preview` produces sanitised evidence and a short-lived signed approval
+bound to the user, operation, sanitised content and image hashes. The engineer must inspect and explicitly approve
+that preview. Image pixels require separate human review; no automatic screenshot secret removal is claimed.
+IncidentIQ uses automated sensitive-data detection and redaction, with mandatory human review before external
+processing. Redaction is best-effort and cannot guarantee detection of every secret.
 
----
+## Optional telemetry and provider status
 
-## Content and video
+Configure `PROMETHEUS_URL`, optional bearer token, and the query/threshold variables in `.env.example` locally.
+Only these configured expressions reach GET `/api/v1/query`. All configured finite numeric checks must pass for
+`VERIFIED_BY_TELEMETRY`; failed, absent or invalid results are `NOT_VERIFIED`. Without configuration, the adapter
+reports `TELEMETRY_NOT_CONFIGURED`; engineer-confirmed resolution is `ENGINEER_ATTESTED`.
+No production endpoint was supplied for this release, so independent recovery is not verified.
 
-[`content/`](content/) has the article, LinkedIn, and Reddit drafts, and [`video/`](video/) has the demo script, shot
-list, thumbnail brief, and upload copy. These are submission drafts, not published pieces: some contain explicit
-placeholders. See [`content/README_FIRST.md`](content/README_FIRST.md) before publishing any of them.
+Header provider panels show app-observed states, timestamps and operation counts. Groq usage comes from actual
+responses and rate-limit headers; it is not an individual key credit balance. Hindsight billing/usage links open
+its Cloud dashboard. No undocumented billing API is queried and no remaining credits are invented.
 
----
+## Release freeze
 
-## Limitations
-
-- **Synthetic data.** Tamarind Pay, its services, people and 12 incidents are invented, modelled on common production
-  failures (lock-holding migrations, Kafka poison messages, cert expiry, JWKS rotation, OOMs). Nothing comes from a
-  real company.
-- **No live calls verified.** Every test and the offline run use `FakeMemory` (keyword overlap) and `OfflineLLM`
-  (a string template). SDK call *signatures* are checked against `hindsight-client` 1.2.0, but no request has been
-  sent to Hindsight Cloud, a self-hosted Hindsight, or Groq. Server-side behaviour (fact extraction, temporal recall,
-  how `tags_match="all_strict"` treats untagged memories, `query_timestamp`) is untested.
-- **The offline eval numbers mean nothing.** The template copies incident IDs from whatever was recalled, so
-  "answer cites the right incident" is trivially 1.0 offline. Only quote numbers from a live run.
-- **Retained advice can crowd recall.** Every answer is retained as `kind:advice`. In the offline learning curve,
-  earlier advice ranks above the incidents it quotes. With real Hindsight this may need a `types` filter,
-  a lower weight, or excluding `kind:advice` from the first recall.
-- **No auth, no pager integration.** The console is a local demo: no login, no PagerDuty/Opsgenie webhook, no Slack.
-  Alerts are pasted in.
-- **Model behaviour unmeasured.** Tool-calling reliability of `openai/gpt-oss-120b` and `qwen/qwen3-32b` on Groq, and
-  latency under a real page, have not been measured.
-
----
-
-## Team
-
-Aryan Dubey, Francis Reuben R, Gopreeth Saharsh, Rohith AD.
-
-## License
-
-[MIT](LICENSE).
+The local release is identified by tag `incidentiq-mvp-v1.0.0` only after the release gates pass. See
+`docs/RELEASE_TEST_REPORT.md`. Feature development is closed; changes to the frozen release require an explicit
+new development cycle. There is no public deployment. The architecture remains FastAPI + static HTML/CSS/JS,
+local JSON history/auth, Groq inference and persistent Hindsight Cloud memory on a dedicated SDK thread.
+For the tested dependency set install `requirements.lock` in a Python 3.12 virtual environment. Run one process.
+Limitations: local prototype identity, no enterprise identity/RBAC or compliance guarantee, best-effort text
+redaction, manual pixel privacy review, no real production telemetry verification, and synthetic incident tests
+rather than a diagnostic-accuracy benchmark. Installed Codex visual inspection was blocked by Computer Use;
+the IncidentIQ browser workspace itself was manually inspected on desktop and mobile.

@@ -1,0 +1,9 @@
+{
+  "status": "PASS actual process restart preserves local history, protected access, resolved outcome and real Cloud memory",
+  "timestamp": "2026-11-14T07:26:06.397473+00:00",
+  "persisted_investigations": 4,
+  "verified_incident_id": "IQ-da2f162b8795",
+  "recall_count": 55,
+  "first_search_cached": false,
+  "repeat_search_cached": true
+}

@@ -1,0 +1,133 @@
+{
+  "vision": {
+    "status": "PASS actual three-image PNG/JPEG/WebP request",
+    "model": "qwen/qwen3.8-27b",
+    "marker": "INCIDENTIQ-VISION-PROBE-20261114",
+    "response": {
+      "incident_summary": "Production incident for probe-orders service characterized by HTTP 503 errors and database pool exhaustion (DB_POOL_TIMEOUT). The error logs indicate a saturated connection pool with 40 active connections, 0 idle connections, and 112 waiting requests. The symptoms are observed following an exception-handler deployment.",
+      "service": "probe-orders",
+      "environment": "production",
+      "severity": "",
+      "error_signatures": [
+        "INCIDENTIQ-VISION-PROBE-20261114",
+        "ERROR DB_POOL_TIMEOUT active=40 idle=0 waiting=112",
+        "HTTP 503 after exception-handler deploy"
+      ],
+      "observed_symptoms": [
+        "HTTP 503 status codes returned by the service",
+        "Database pool exhaustion with 0 idle connections",
+        "High request backlog with 112 requests waiting for a database connection",
+        "All 40 available database connections are active"
+      ],
+      "affected_components": [
+        "probe-orders service",
+        "Database connection pool"
+      ],
+      "possible_dependencies": [
+        "Database instance"
+      ],
+      "recent_changes": [
+        "Exception-handler deploy"
+      ],
+      "known_facts": [
+        "The service is probe-orders running in production",
+        "The probe marker is INCIDENTIQ-VISION-PROBE-20261114",
+        "The error log explicitly states 'ERROR DB_POOL_TIMEOUT'",
+        "Pool metrics show active=40, idle=0, waiting=112",
+        "HTTP 503 errors are occurring after an exception-handler deployment"
+      ],
+      "suspected_causes": [
+        "Database connection pool saturation leading to timeouts",
+        "Potential regression or configuration issue introduced by the exception-handler deployment"
+      ],
+      "missing_information": [
+        "Specific timestamp of the incident start",
+        "Details of the exception-handler deployment (version, diff, author)",
+        "Database instance health and performance metrics",
+        "Application logs showing the specific queries causing the pool exhaustion",
+        "Confirmation of whether the 503 errors are intermittent or persistent"
+      ],
+      "retrieval_queries": [
+        "probe-orders DB_POOL_TIMEOUT active=40 idle=0 waiting=112",
+        "HTTP 503 after exception-handler deploy probe-orders",
+        "INCIDENTIQ-VISION-PROBE-20261114 database pool exhaustion"
+      ]
+    },
+    "usage": {
+      "prompt_tokens": 5991,
+      "completion_tokens": 578,
+      "total_tokens": 6569
+    },
+    "rate_limit_headers": {
+      "x-ratelimit-limit-requests": "1000",
+      "x-ratelimit-limit-tokens": "8000",
+      "x-ratelimit-remaining-requests": "999",
+      "x-ratelimit-remaining-tokens": "1110",
+      "x-ratelimit-reset-requests": "1m26.4s",
+      "x-ratelimit-reset-tokens": "51.675s"
+    }
+  },
+  "hindsight": {
+    "status": "PASS real retain and differently worded recall",
+    "document_id": "REMEDIATION-SMOKE-a982f57e7a",
+    "source_ids": [
+      "89155693-da03-4240-afd4-010a5eeda735",
+      "6dedaaf1-07d7-4a71-9611-7987dbf470ea",
+      "2d906af3-9cc5-43a8-80cc-8b51b06d8d18",
+      "85896d72-4ddf-4e04-83c6-0165c974486a",
+      "14683fdc-bbcc-4bbc-a0c3-213439ad1907",
+      "ce9aec2c-77e1-4c86-b3db-2afedd967e5f",
+      "93ddecbb-58af-4e53-a393-7d881b6e572d",
+      "7f3f23ec-a628-428b-9972-d63baccec737",
+      "acd63950-5604-4a3e-8a5a-2166655d99bd",
+      "6c7ce739-89aa-43b4-8a51-977c9bc0b2a6",
+      "b8fb1ab7-3ea7-435e-a98e-a4f0b5b12cf5",
+      "839602f4-9857-499b-aeaa-e476fcb3a554",
+      "ae21f943-63cc-47f7-b728-1061597e3343",
+      "870fbb27-3876-458e-b95d-76aef76caa8e",
+      "9544e1c0-6855-4a57-bb8e-1bb778bdc7b1",
+      "a7607d1d-86aa-4e17-869e-b196c63eca50",
+      "e9f8a979-7c68-49eb-8080-26a15ecdd41e",
+      "ecfd4ab0-89be-4108-a3bc-204ce446018c",
+      "c2e8a143-36aa-47de-a8d3-948b6d7226e0",
+      "ba0c18d1-6c2b-4986-bc83-934fa68ae478",
+      "ef345cc8-9113-4ba4-9bb3-9230186c20f4",
+      "222250c3-c08f-4f89-a5bf-94f120f4f122",
+      "ff576e48-a9d3-4059-a146-0ba745239516",
+      "fcbef2fa-fad7-4437-8f76-7aeb6cead9c6",
+      "a76f80d5-592d-4cbd-bab2-eeb4f629d763",
+      "c1f97b0a-1153-4ee0-ab9f-33e93c88df44",
+      "a8fa40f2-1e4d-4c2c-bfbe-4270d23da484",
+      "a8f788fc-3d5c-46d0-a36a-c2486b0f79ce",
+      "fbc23dee-1351-43b6-a5ab-4384dd36f829",
+      "fb63609d-60c8-4014-b7a7-fc9c1e748671",
+      "dd409107-8d1e-45a4-94bf-1f508ef5cc1f",
+      "d481a277-3031-4ae0-8859-7e6226820f0f",
+      "b95a382b-ffd6-4e20-b47c-376c0bc8b853",
+      "6833258e-621a-490b-8e0e-d168dc2919d7",
+      "79d32b18-a299-46dc-b0ab-0c1e6772245d",
+      "44e29094-44e9-4686-835b-5d7888c1e59c",
+      "92b8b761-8d02-4243-8454-33a9fa5138e7",
+      "ef6b6e25-ef6e-4e97-b89b-6ef76f6b1c50",
+      "423b7e33-43fd-4a35-b782-c7388a154657",
+      "bf5d0298-36d2-4c44-ab82-013c12694c28",
+      "f04cf052-8845-4a8d-ac0b-c132fca92477",
+      "422f0225-0ae3-482f-80ed-b222eb11f450",
+      "a70bde9e-4ebb-47a3-83b3-e68feae0fe6c",
+      "6d0a382c-79d4-4c5a-b7d3-1a177646906f",
+      "8140aeac-534d-489d-9e26-3c4acf808d41",
+      "5df97dd6-206c-468a-8c5b-59ffa337c7ec",
+      "2d16f213-87fb-4d47-8913-b3f9221d5369",
+      "e627f392-564f-4acf-b615-777d5a5c3da2",
+      "c3155d1b-49c4-4c5d-8ae4-91e44fbbd740",
+      "e7cf021a-23c0-429f-99db-011f921f5cf8",
+      "12e0e082-a730-4046-867b-3acfa0fc78af",
+      "85fdfb0e-c1c0-4ae5-a130-abf622b6fc80",
+      "d7c9ce5f-a7cd-48f2-914f-46191306685d",
+      "696df86e-cb3b-4dee-a4c9-9228326c996d",
+      "c5d95e3d-877d-4af0-a674-beb8352df37e",
+      "f4701923-7d96-4585-9128-7354d13989c0",
+      "ea1d2589-bbd1-4064-803b-40189726e9d7"
+    ]
+  }
+}

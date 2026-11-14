@@ -27,13 +27,13 @@ class Settings:
     def from_env(cls, offline: bool | None = None) -> "Settings":
         off = offline if offline is not None else os.getenv("RECURRENCE_OFFLINE", "0") == "1"
         return cls(
-            hindsight_url=os.getenv("HINDSIGHT_API_URL") or os.getenv("HINDSIGHT_URL", "http://localhost:8888"),
+            hindsight_url=os.getenv("HINDSIGHT_API_URL") or os.getenv("HINDSIGHT_URL", "https://api.hindsight.vectorize.io"),
             hindsight_api_key=os.getenv("HINDSIGHT_API_KEY") or None,
-            bank_id=os.getenv("HINDSIGHT_BANK_ID", "recurrence-tamarind-sre"),
+            bank_id=os.getenv("HINDSIGHT_BANK_ID", "incidentiq-sre"),
             groq_api_key=os.getenv("GROQ_API_KEY") or None,
             groq_base_url=os.getenv("GROQ_BASE_URL", "https://api.groq.com/openai/v1"),
             model=os.getenv("GROQ_MODEL", "openai/gpt-oss-120b"),
-            fallback_model=os.getenv("GROQ_FALLBACK_MODEL", "qwen/qwen3-32b"),
+            fallback_model=os.getenv("GROQ_FALLBACK_MODEL", ""),
             offline=off,
         )
 
@@ -49,6 +49,9 @@ def build_memory(s: Settings):
 def build_llm(s: Settings):
     from .llm import GroqLLM, OfflineLLM
 
-    if s.offline or not s.groq_api_key:
+    if s.offline:
         return OfflineLLM()
+    if not s.groq_api_key:
+        from .llm import MissingLLM
+        return MissingLLM()
     return GroqLLM(api_key=s.groq_api_key, base_url=s.groq_base_url, model=s.model, fallback_model=s.fallback_model)

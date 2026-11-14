@@ -1,0 +1,1189 @@
+{
+  "status": "PASS real screenshot \u2192 structured evidence \u2192 targeted Hindsight recall \u2192 Groq report \u2192 classified intake/advice \u2192 verified resolution",
+  "service": "vision-orders-f3cdf9",
+  "investigation": {
+    "conversation_id": "IQ-eeb85f7dc8c5",
+    "timings_ms": {
+      "understanding": 1998.3,
+      "memory_search": 6101.4,
+      "evidence_validation": 0.6,
+      "reasoning": 10040.9,
+      "retention": 3793.6
+    },
+    "retrieval_events": [
+      {
+        "query": "vision-orders-f3cdf9 DB_POOL_TIMEOUT connection timeout 30000ms pool exhaustion active=40 idle=0 waiting=112",
+        "duration_ms": 1824.7,
+        "cached": false,
+        "returned": 0
+      },
+      {
+        "query": "database connection pool exhaustion production service timeout 30s 112 waiting requests 40 active connections",
+        "duration_ms": 2262.7,
+        "cached": false,
+        "returned": 27
+      },
+      {
+        "query": "exception handler deployment 12:40 database connection leak pool saturation cross-service dependency failure",
+        "duration_ms": 1540.4,
+        "cached": false,
+        "returned": 27
+      }
+    ],
+    "retention": {
+      "intake": "retained",
+      "advice": "retained"
+    },
+    "answer": "{\n  \"ai_reasoning\": [\n    {\n      \"hypothesis\": \"The exception handler deployed at 12:40 leaks database connections, preventing them from being returned to the pool.\",\n      \"confidence\": \"medium\",\n      \"supporting_evidence\": [\n        \"Current evidence: \\\"exception-path session cleanup changed\\\"\",\n        \"Recent change: New exception handler deployed at 12:40\",\n        \"Pool metrics show 40 active / 0 idle connections with 112 waiting requests\",\n        \"Historical incidents where an exception\\u2011path leak caused identical pool exhaustion\"\n      ],\n      \"historical_source_ids\": [\n        \"696df86e-cb3b-4dee-a4c9-9228326c996d\",\n        \"6c7ce739-89aa-43b4-8a51-977c9bc0b2a6\",\n        \"12e0e082-a730-4046-867b-3acfa0fc78af\",\n        \"85896d72-4ddf-4e04-83c6-0165c974486a\"\n      ],\n      \"similarities\": [\n        \"Exact same error signature (DB_POOL_TIMEOUT, 40 active, 0 idle)\",\n        \"Root cause identified as leaked sessions in exception handling\"\n      ],\n      \"differences\": [\n        \"Service name differs (vision-orders-f3cdf9 vs gate-orders-be2334 / smoke\\u2011orders)\",\n        \"Specific code change (new handler) is unique to this incident\"\n      ],\n      \"uncertainty\": \"Need to confirm that the new handler fails to close connections on all exception paths.\",\n      \"basis\": \"current evidence / historical evidence\"\n    },\n    {\n      \"hypothesis\": \"A sudden spike in request volume exceeded the pool capacity, filling all 40 connections.\",\n      \"confidence\": \"medium\",\n      \"supporting_evidence\": [\n        \"112 requests are waiting for a connection\",\n        \"Pool max size appears to be 40\"\n      ],\n      \"historical_source_ids\": [],\n      \"similarities\": [\n        \"High number of waiting requests relative to pool size\"\n      ],\n      \"differences\": [\n        \"No traffic\\u2011rate metrics have been provided for this incident\"\n      ],\n      \"uncertainty\": \"Exact request rate before and during the outage is unknown.\",\n      \"basis\": \"current evidence / general technical knowledge\"\n    },\n    {\n      \"hypothesis\": \"Slow or long\\u2011running database queries are holding connections longer than expected, causing saturation.\",\n      \"confidence\": \"low\",\n      \"supporting_evidence\": [\n        \"Pool is fully saturated, which can be caused by long\\u2011duration queries\"\n      ],\n      \"historical_source_ids\": [],\n      \"similarities\": [\n        \"Connection pool exhaustion can be triggered by slow queries\"\n      ],\n      \"differences\": [\n        \"No query execution time or slow\\u2011query logs have been supplied\"\n      ],\n      \"uncertainty\": \"Actual query latency and distribution are unknown.\",\n      \"basis\": \"current evidence / general technical knowledge\"\n    },\n    {\n      \"hypothesis\": \"Database instance health (CPU, I/O, lock contention) has degraded, making each query slower and exhausting the pool.\",\n      \"confidence\": \"low\",\n      \"supporting_evidence\": [\n        \"Database\\u2011side performance problems can manifest as connection\\u2011pool timeouts\"\n      ],\n      \"historical_source_ids\": [],\n      \"similarities\": [\n        \"Database\\u2011side performance issues can cause connection exhaustion\"\n      ],\n      \"differences\": [\n        \"No DB health metrics have been presented for this incident\"\n      ],\n      \"uncertainty\": \"Database resource utilization data is missing.\",\n      \"basis\": \"current evidence / general technical knowledge\"\n    }\n  ],\n  \"recommended_investigation\": [\n    {\n      \"priority\": 1,\n      \"check\": \"Audit the new exception handler to verify that every code path releases the database connection (e.g., add logging or a finally block).\",\n      \"expected_observation\": \"Connections opened in the handler are not closed on exception paths, causing the active\\u2011connection count to remain at 40.\",\n      \"safe_remediation\": \"Add a finally block that explicitly closes or returns the connection to the pool, and redeploy the corrected handler.\",\n      \"risk_or_impact\": \"Minimal runtime risk; change can be rolled back if unexpected side effects appear.\",\n      \"verification_required\": \"After redeployment, pool metrics should show active < 40, idle > 0, and waiting requests drop to 0.\"\n    },\n    {\n      \"priority\": 2,\n      \"check\": \"Collect ingress traffic metrics (requests per second) for the last 30\\u202fminutes leading up to the incident.\",\n      \"expected_observation\": \"A noticeable spike in request rate coinciding with the time the pool filled.\",\n      \"safe_remediation\": \"If a spike is confirmed, consider temporary autoscaling of the service or increasing the pool max size after load testing.\",\n      \"risk_or_impact\": \"Increasing pool size may increase DB load; must be validated against DB capacity.\",\n      \"verification_required\": \"Post\\u2011remediation, monitor pool usage to ensure waiting requests remain near zero under the same traffic pattern.\"\n    },\n    {\n      \"priority\": 3,\n      \"check\": \"Enable and review slow\\u2011query logs on the database for the incident window.\",\n      \"expected_observation\": \"One or more queries with execution time approaching or exceeding the 30\\u202fs timeout.\",\n      \"safe_remediation\": \"Optimize identified slow queries or add appropriate indexes; alternatively, raise the query timeout if safe.\",\n      \"risk_or_impact\": \"Query changes can affect application logic; must be tested in staging.\",\n      \"verification_required\": \"Reduced average query duration should lead to faster connection release and lower pool saturation.\"\n    },\n    {\n      \"priority\": 4,\n      \"check\": \"Inspect database instance health dashboards (CPU, I/O, lock waits, connection count).\",\n      \"expected_observation\": \"Elevated CPU/I/O or lock contention that correlates with the pool exhaustion period.\",\n      \"safe_remediation\": \"Scale the DB instance vertically or address the specific resource bottleneck.\",\n      \"risk_or_impact\": \"Scaling may incur cost and require a brief restart depending on the platform.\",\n      \"verification_required\": \"After scaling, verify that query latency drops and pool metrics return to normal levels.\"\n    }\n  ],\n  \"failed_approaches\": [\n    \"Restarting workers provided only temporary relief for the database pool exhaustion (source 696df86e-cb3b-4dee-a4c9-9228326c996d).\",\n    \"Previous attempts to restart the service only provided temporary relief (source 85896d72-4ddf-4e04-83c6-0165c974486a).\"\n  ],\n  \"missing_evidence\": [\n    \"Exact timestamp when the incident began\",\n    \"Database instance health and performance metrics (CPU, I/O, lock waits)\",\n    \"Query execution times and slow\\u2011query logs for the incident window\",\n    \"Full deployment details of the exception handler change (code diff, rollback plan)\",\n    \"Traffic volume trends and request\\u2011rate metrics leading up to the outage\",\n    \"Previous connection\\u2011pool configuration settings (max size, timeout values)\"\n  ],\n  \"resolution_verification\": [\n    \"Confirm that pool metrics show active < 40, idle > 0, and waiting requests = 0 after remediation.\"\n  ]\n}",
+    "report": {
+      "ai_reasoning": [
+        {
+          "hypothesis": "The exception handler deployed at 12:40 leaks database connections, preventing them from being returned to the pool.",
+          "confidence": "medium",
+          "supporting_evidence": [
+            "Current evidence: \"exception-path session cleanup changed\"",
+            "Recent change: New exception handler deployed at 12:40",
+            "Pool metrics show 40 active / 0 idle connections with 112 waiting requests",
+            "Historical incidents where an exception\u2011path leak caused identical pool exhaustion"
+          ],
+          "historical_source_ids": [
+            "696df86e-cb3b-4dee-a4c9-9228326c996d",
+            "6c7ce739-89aa-43b4-8a51-977c9bc0b2a6",
+            "12e0e082-a730-4046-867b-3acfa0fc78af",
+            "85896d72-4ddf-4e04-83c6-0165c974486a"
+          ],
+          "similarities": [
+            "Exact same error signature (DB_POOL_TIMEOUT, 40 active, 0 idle)",
+            "Root cause identified as leaked sessions in exception handling"
+          ],
+          "differences": [
+            "Service name differs (vision-orders-f3cdf9 vs gate-orders-be2334 / smoke\u2011orders)",
+            "Specific code change (new handler) is unique to this incident"
+          ],
+          "uncertainty": "Need to confirm that the new handler fails to close connections on all exception paths.",
+          "basis": "current evidence / historical evidence"
+        },
+        {
+          "hypothesis": "A sudden spike in request volume exceeded the pool capacity, filling all 40 connections.",
+          "confidence": "medium",
+          "supporting_evidence": [
+            "112 requests are waiting for a connection",
+            "Pool max size appears to be 40"
+          ],
+          "historical_source_ids": [],
+          "similarities": [
+            "High number of waiting requests relative to pool size"
+          ],
+          "differences": [
+            "No traffic\u2011rate metrics have been provided for this incident"
+          ],
+          "uncertainty": "Exact request rate before and during the outage is unknown.",
+          "basis": "current evidence / general technical knowledge"
+        },
+        {
+          "hypothesis": "Slow or long\u2011running database queries are holding connections longer than expected, causing saturation.",
+          "confidence": "low",
+          "supporting_evidence": [
+            "Pool is fully saturated, which can be caused by long\u2011duration queries"
+          ],
+          "historical_source_ids": [],
+          "similarities": [
+            "Connection pool exhaustion can be triggered by slow queries"
+          ],
+          "differences": [
+            "No query execution time or slow\u2011query logs have been supplied"
+          ],
+          "uncertainty": "Actual query latency and distribution are unknown.",
+          "basis": "current evidence / general technical knowledge"
+        },
+        {
+          "hypothesis": "Database instance health (CPU, I/O, lock contention) has degraded, making each query slower and exhausting the pool.",
+          "confidence": "low",
+          "supporting_evidence": [
+            "Database\u2011side performance problems can manifest as connection\u2011pool timeouts"
+          ],
+          "historical_source_ids": [],
+          "similarities": [
+            "Database\u2011side performance issues can cause connection exhaustion"
+          ],
+          "differences": [
+            "No DB health metrics have been presented for this incident"
+          ],
+          "uncertainty": "Database resource utilization data is missing.",
+          "basis": "current evidence / general technical knowledge"
+        }
+      ],
+      "recommended_investigation": [
+        {
+          "priority": 1,
+          "check": "Audit the new exception handler to verify that every code path releases the database connection (e.g., add logging or a finally block).",
+          "expected_observation": "Connections opened in the handler are not closed on exception paths, causing the active\u2011connection count to remain at 40.",
+          "safe_remediation": "Add a finally block that explicitly closes or returns the connection to the pool, and redeploy the corrected handler.",
+          "risk_or_impact": "Minimal runtime risk; change can be rolled back if unexpected side effects appear.",
+          "verification_required": "After redeployment, pool metrics should show active < 40, idle > 0, and waiting requests drop to 0."
+        },
+        {
+          "priority": 2,
+          "check": "Collect ingress traffic metrics (requests per second) for the last 30\u202fminutes leading up to the incident.",
+          "expected_observation": "A noticeable spike in request rate coinciding with the time the pool filled.",
+          "safe_remediation": "If a spike is confirmed, consider temporary autoscaling of the service or increasing the pool max size after load testing.",
+          "risk_or_impact": "Increasing pool size may increase DB load; must be validated against DB capacity.",
+          "verification_required": "Post\u2011remediation, monitor pool usage to ensure waiting requests remain near zero under the same traffic pattern."
+        },
+        {
+          "priority": 3,
+          "check": "Enable and review slow\u2011query logs on the database for the incident window.",
+          "expected_observation": "One or more queries with execution time approaching or exceeding the 30\u202fs timeout.",
+          "safe_remediation": "Optimize identified slow queries or add appropriate indexes; alternatively, raise the query timeout if safe.",
+          "risk_or_impact": "Query changes can affect application logic; must be tested in staging.",
+          "verification_required": "Reduced average query duration should lead to faster connection release and lower pool saturation."
+        },
+        {
+          "priority": 4,
+          "check": "Inspect database instance health dashboards (CPU, I/O, lock waits, connection count).",
+          "expected_observation": "Elevated CPU/I/O or lock contention that correlates with the pool exhaustion period.",
+          "safe_remediation": "Scale the DB instance vertically or address the specific resource bottleneck.",
+          "risk_or_impact": "Scaling may incur cost and require a brief restart depending on the platform.",
+          "verification_required": "After scaling, verify that query latency drops and pool metrics return to normal levels."
+        }
+      ],
+      "failed_approaches": [
+        "Restarting workers provided only temporary relief for the database pool exhaustion (source 696df86e-cb3b-4dee-a4c9-9228326c996d).",
+        "Previous attempts to restart the service only provided temporary relief (source 85896d72-4ddf-4e04-83c6-0165c974486a)."
+      ],
+      "missing_evidence": [
+        "Exact timestamp when the incident began",
+        "Database instance health and performance metrics (CPU, I/O, lock waits)",
+        "Query execution times and slow\u2011query logs for the incident window",
+        "Full deployment details of the exception handler change (code diff, rollback plan)",
+        "Traffic volume trends and request\u2011rate metrics leading up to the outage",
+        "Previous connection\u2011pool configuration settings (max size, timeout values)"
+      ],
+      "resolution_verification": [
+        "Confirm that pool metrics show active < 40, idle > 0, and waiting requests = 0 after remediation."
+      ]
+    },
+    "understanding": {
+      "incident_summary": "Production service vision-orders-f3cdf9 is experiencing database connection pool exhaustion, resulting in DB_POOL_TIMEOUT errors after 30000ms. Pool metrics indicate 40 active connections, 0 idle connections, and 112 waiting requests. A new exception handler was deployed at 12:40.",
+      "service": "vision-orders-f3cdf9",
+      "environment": "production",
+      "severity": "SEV2",
+      "error_signatures": [
+        "ERROR DB_POOL_TIMEOUT: connection timeout after 30000ms",
+        "pool active=40 idle=0 waiting=112"
+      ],
+      "observed_symptoms": [
+        "Database connection pool is fully saturated with 40 active connections and 0 idle connections",
+        "112 requests are waiting for a database connection",
+        "Connection attempts are timing out after 30000ms"
+      ],
+      "affected_components": [
+        "vision-orders-f3cdf9",
+        "Database connection pool"
+      ],
+      "possible_dependencies": [
+        "Database instance",
+        "Database connection pool configuration"
+      ],
+      "recent_changes": [
+        "New exception handler deployed at 12:40"
+      ],
+      "known_facts": [
+        "Service is running in production environment",
+        "Incident is classified as SEV2",
+        "Connection pool max capacity appears to be 40 based on active count",
+        "Timeout threshold is set to 30000ms"
+      ],
+      "suspected_causes": [
+        "Database connection leak preventing connections from being returned to the pool",
+        "Sudden spike in database query load exceeding pool capacity",
+        "Slow database queries holding connections longer than expected",
+        "Potential interaction with the newly deployed exception handler at 12:40"
+      ],
+      "missing_information": [
+        "Timestamp of when the incident started",
+        "Database instance health and performance metrics",
+        "Query execution times and slow query logs",
+        "Full deployment history and details of the exception handler change",
+        "Traffic volume trends leading up to the incident",
+        "Previous pool configuration settings"
+      ],
+      "retrieval_queries": [
+        "vision-orders-f3cdf9 DB_POOL_TIMEOUT connection timeout 30000ms pool exhaustion active=40 idle=0 waiting=112",
+        "database connection pool exhaustion production service timeout 30s 112 waiting requests 40 active connections",
+        "exception handler deployment 12:40 database connection leak pool saturation cross-service dependency failure"
+      ]
+    },
+    "understanding_source": "groq",
+    "understanding_model": "qwen/qwen3.8-27b",
+    "vision_used": true,
+    "attachment": {
+      "mime": "image/png",
+      "size_bytes": 28826
+    },
+    "understanding_errors": [],
+    "hindsight_status": "connected",
+    "memory_validation": [
+      {
+        "source_id": "696df86e-cb3b-4dee-a4c9-9228326c996d",
+        "service_relevance": "different",
+        "environment_relevance": "match",
+        "resolution_status": "verified",
+        "warnings": [
+          "Different service: potentially related dependency only"
+        ],
+        "contradictions": "Not automatically resolved; compare evidence, dates and versions before applying advice",
+        "eligible_for_reasoning": true
+      },
+      {
+        "source_id": "f4701923-7d96-4585-9128-7354d13989c0",
+        "service_relevance": "different",
+        "environment_relevance": "match",
+        "resolution_status": "verified",
+        "warnings": [
+          "Different service: potentially related dependency only"
+        ],
+        "contradictions": "Not automatically resolved; compare evidence, dates and versions before applying advice",
+        "eligible_for_reasoning": true
+      },
+      {
+        "source_id": "6c7ce739-89aa-43b4-8a51-977c9bc0b2a6",
+        "service_relevance": "different",
+        "environment_relevance": "match",
+        "resolution_status": "verified",
+        "warnings": [
+          "Different service: potentially related dependency only"
+        ],
+        "contradictions": "Not automatically resolved; compare evidence, dates and versions before applying advice",
+        "eligible_for_reasoning": true
+      },
+      {
+        "source_id": "20c5758b-5c45-408a-a983-11bfb61f6ce9",
+        "service_relevance": "different",
+        "environment_relevance": "match",
+        "resolution_status": "verified",
+        "warnings": [
+          "Different service: potentially related dependency only"
+        ],
+        "contradictions": "Not automatically resolved; compare evidence, dates and versions before applying advice",
+        "eligible_for_reasoning": true
+      },
+      {
+        "source_id": "c5d95e3d-877d-4af0-a674-beb8352df37e",
+        "service_relevance": "different",
+        "environment_relevance": "match",
+        "resolution_status": "verified",
+        "warnings": [
+          "Different service: potentially related dependency only"
+        ],
+        "contradictions": "Not automatically resolved; compare evidence, dates and versions before applying advice",
+        "eligible_for_reasoning": true
+      },
+      {
+        "source_id": "85896d72-4ddf-4e04-83c6-0165c974486a",
+        "service_relevance": "different",
+        "environment_relevance": "match",
+        "resolution_status": "verified",
+        "warnings": [
+          "Different service: potentially related dependency only"
+        ],
+        "contradictions": "Not automatically resolved; compare evidence, dates and versions before applying advice",
+        "eligible_for_reasoning": true
+      },
+      {
+        "source_id": "455822ca-b015-4fb8-9d02-e02c4f4b4af5",
+        "service_relevance": "different",
+        "environment_relevance": "match",
+        "resolution_status": "verified",
+        "warnings": [
+          "Different service: potentially related dependency only"
+        ],
+        "contradictions": "Not automatically resolved; compare evidence, dates and versions before applying advice",
+        "eligible_for_reasoning": true
+      },
+      {
+        "source_id": "12e0e082-a730-4046-867b-3acfa0fc78af",
+        "service_relevance": "different",
+        "environment_relevance": "match",
+        "resolution_status": "verified",
+        "warnings": [
+          "Different service: potentially related dependency only"
+        ],
+        "contradictions": "Not automatically resolved; compare evidence, dates and versions before applying advice",
+        "eligible_for_reasoning": true
+      },
+      {
+        "source_id": "a70bde9e-4ebb-47a3-83b3-e68feae0fe6c",
+        "service_relevance": "different",
+        "environment_relevance": "match",
+        "resolution_status": "unverified",
+        "warnings": [
+          "Different service: potentially related dependency only",
+          "Resolution not verified by structured source metadata"
+        ],
+        "contradictions": "Not automatically resolved; compare evidence, dates and versions before applying advice",
+        "eligible_for_reasoning": false
+      },
+      {
+        "source_id": "a8fa40f2-1e4d-4c2c-bfbe-4270d23da484",
+        "service_relevance": "different",
+        "environment_relevance": "match",
+        "resolution_status": "unverified",
+        "warnings": [
+          "Different service: potentially related dependency only",
+          "Resolution not verified by structured source metadata"
+        ],
+        "contradictions": "Not automatically resolved; compare evidence, dates and versions before applying advice",
+        "eligible_for_reasoning": false
+      },
+      {
+        "source_id": "bc2dfa58-56b3-4d6b-a99a-d6c1f367263a",
+        "service_relevance": "different",
+        "environment_relevance": "unknown",
+        "resolution_status": "unverified-advice",
+        "warnings": [
+          "Historical environment unknown",
+          "Different service: potentially related dependency only",
+          "Resolution not verified by structured source metadata",
+          "Unverified agent advice; never treat as successful remediation"
+        ],
+        "contradictions": "Not automatically resolved; compare evidence, dates and versions before applying advice",
+        "eligible_for_reasoning": false
+      },
+      {
+        "source_id": "f9bc6d1d-fcec-4438-84e3-9ea7b3af6e66",
+        "service_relevance": "different",
+        "environment_relevance": "unknown",
+        "resolution_status": "unverified-advice",
+        "warnings": [
+          "Historical environment unknown",
+          "Different service: potentially related dependency only",
+          "Resolution not verified by structured source metadata",
+          "Unverified agent advice; never treat as successful remediation"
+        ],
+        "contradictions": "Not automatically resolved; compare evidence, dates and versions before applying advice",
+        "eligible_for_reasoning": false
+      },
+      {
+        "source_id": "b9ea1aca-d655-485a-8b53-1295dedd6edd",
+        "service_relevance": "different",
+        "environment_relevance": "unknown",
+        "resolution_status": "unverified-advice",
+        "warnings": [
+          "Historical environment unknown",
+          "Different service: potentially related dependency only",
+          "Resolution not verified by structured source metadata",
+          "Unverified agent advice; never treat as successful remediation"
+        ],
+        "contradictions": "Not automatically resolved; compare evidence, dates and versions before applying advice",
+        "eligible_for_reasoning": false
+      },
+      {
+        "source_id": "2036aae0-3400-4af5-b554-3a04e8199d0e",
+        "service_relevance": "different",
+        "environment_relevance": "unknown",
+        "resolution_status": "unverified-advice",
+        "warnings": [
+          "Historical environment unknown",
+          "Different service: potentially related dependency only",
+          "Resolution not verified by structured source metadata",
+          "Unverified agent advice; never treat as successful remediation"
+        ],
+        "contradictions": "Not automatically resolved; compare evidence, dates and versions before applying advice",
+        "eligible_for_reasoning": false
+      },
+      {
+        "source_id": "e3fa763d-23e8-4011-a002-2dd4f9ac8688",
+        "service_relevance": "different",
+        "environment_relevance": "unknown",
+        "resolution_status": "unverified-advice",
+        "warnings": [
+          "Historical environment unknown",
+          "Different service: potentially related dependency only",
+          "Resolution not verified by structured source metadata",
+          "Unverified agent advice; never treat as successful remediation"
+        ],
+        "contradictions": "Not automatically resolved; compare evidence, dates and versions before applying advice",
+        "eligible_for_reasoning": false
+      },
+      {
+        "source_id": "b706d726-a20c-4a71-ba49-ac6718070e54",
+        "service_relevance": "different",
+        "environment_relevance": "unknown",
+        "resolution_status": "unverified-advice",
+        "warnings": [
+          "Historical environment unknown",
+          "Different service: potentially related dependency only",
+          "Resolution not verified by structured source metadata",
+          "Unverified agent advice; never treat as successful remediation"
+        ],
+        "contradictions": "Not automatically resolved; compare evidence, dates and versions before applying advice",
+        "eligible_for_reasoning": false
+      },
+      {
+        "source_id": "94da38a7-503a-444b-9390-c621ef9e7a2b",
+        "service_relevance": "different",
+        "environment_relevance": "unknown",
+        "resolution_status": "unverified-advice",
+        "warnings": [
+          "Historical environment unknown",
+          "Different service: potentially related dependency only",
+          "Resolution not verified by structured source metadata",
+          "Unverified agent advice; never treat as successful remediation"
+        ],
+        "contradictions": "Not automatically resolved; compare evidence, dates and versions before applying advice",
+        "eligible_for_reasoning": false
+      },
+      {
+        "source_id": "cdebcfdd-1360-4733-be2f-43eddb397d3e",
+        "service_relevance": "different",
+        "environment_relevance": "unknown",
+        "resolution_status": "unverified-advice",
+        "warnings": [
+          "Historical environment unknown",
+          "Different service: potentially related dependency only",
+          "Resolution not verified by structured source metadata",
+          "Unverified agent advice; never treat as successful remediation"
+        ],
+        "contradictions": "Not automatically resolved; compare evidence, dates and versions before applying advice",
+        "eligible_for_reasoning": false
+      },
+      {
+        "source_id": "79d32b18-a299-46dc-b0ab-0c1e6772245d",
+        "service_relevance": "different",
+        "environment_relevance": "unknown",
+        "resolution_status": "unverified-advice",
+        "warnings": [
+          "Historical environment unknown",
+          "Different service: potentially related dependency only",
+          "Resolution not verified by structured source metadata",
+          "Unverified agent advice; never treat as successful remediation"
+        ],
+        "contradictions": "Not automatically resolved; compare evidence, dates and versions before applying advice",
+        "eligible_for_reasoning": false
+      }
+    ],
+    "historical_experience": "Relevant memories retrieved; review validation warnings",
+    "memory_on": true,
+    "memories": [
+      {
+        "text": "Incident INC-GATE-be2334 occurred in production on the gate-orders-be2334 service, characterized by database pool timeouts with 40 active and 0 idle sessions. | When: 2026-11-14T12:31:00+05:30 | Where: production\nRestarting workers provided only a temporary fix for the database pool exhaustion. | When: 2026-11-14T12:31:00+05:30 | Where: production\nThe root cause of incident INC-GATE-be2334 was an exception path that leaked pooled database sessions. | When: 2026-11-14T12:31:00+05:30 | Where: production",
+        "id": "696df86e-cb3b-4dee-a4c9-9228326c996d",
+        "source_ids": [
+          "696df86e-cb3b-4dee-a4c9-9228326c996d",
+          "839602f4-9857-499b-aeaa-e476fcb3a554",
+          "c400466d-7a10-4797-a766-e1296ce12f9e"
+        ],
+        "type": "world",
+        "occurred_at": "2026-11-14T07:01:00+00:00",
+        "tags": [
+          "engineer:synthetic-gate",
+          "kind:incident",
+          "service:gate-orders-be2334"
+        ],
+        "context": "resolved incident postmortem for gate-orders-be2334",
+        "document_id": "INC-GATE-be2334",
+        "metadata": {
+          "incident_id": "INC-GATE-be2334",
+          "service": "gate-orders-be2334",
+          "kind": "incident",
+          "environment": "production",
+          "severity": "SEV2",
+          "status": "verified",
+          "source": "engineer-feedback",
+          "outcome": "Verified pool idle recovered and errors zero for 15 minutes"
+        },
+        "days_ago": 0,
+        "validation": {
+          "service_relevance": "different",
+          "environment_relevance": "match",
+          "resolution_status": "verified",
+          "warnings": [
+            "Different service: potentially related dependency only"
+          ],
+          "contradictions": "Not automatically resolved; compare evidence, dates and versions before applying advice",
+          "eligible_for_reasoning": true
+        }
+      },
+      {
+        "text": "The smoke-orders production service experienced database connection timeouts caused by a session leak that exhausted the connection pool. | When: 2026-11-14 | Where: production",
+        "id": "f4701923-7d96-4585-9128-7354d13989c0",
+        "source_ids": [
+          "f4701923-7d96-4585-9128-7354d13989c0"
+        ],
+        "type": "world",
+        "occurred_at": "2026-11-14T06:58:27.250000+00:00",
+        "tags": [
+          "synthetic:true",
+          "service:smoke-orders",
+          "kind:incident"
+        ],
+        "context": "synthetic verified connectivity test; not a real production incident",
+        "document_id": "INCIDENTIQ-LIVE-SMOKE-67d856b9ba9d",
+        "metadata": {
+          "incident_id": "INCIDENTIQ-LIVE-SMOKE-67d856b9ba9d",
+          "kind": "incident",
+          "service": "smoke-orders",
+          "status": "verified",
+          "environment": "production"
+        },
+        "days_ago": 0,
+        "validation": {
+          "service_relevance": "different",
+          "environment_relevance": "match",
+          "resolution_status": "verified",
+          "warnings": [
+            "Different service: potentially related dependency only"
+          ],
+          "contradictions": "Not automatically resolved; compare evidence, dates and versions before applying advice",
+          "eligible_for_reasoning": true
+        }
+      },
+      {
+        "text": "Restarting workers was a failed approach that only provided temporary relief for the database pool timeout. | When: 2026-11-14 | Where: production\nError signature for incident INCIDENTIQ-LEARNING-35772d0611 was 'Connection timeout; idle=0'. | When: 2026-11-14 | Where: production\nIncident INCIDENTIQ-LEARNING-35772d0611 occurred on service smoke-cd1c53 in production due to database pool timeouts caused by leaked sessions. | When: 2026-11-14 | Where: production | Sessions were not released in the exception handler.",
+        "id": "6c7ce739-89aa-43b4-8a51-977c9bc0b2a6",
+        "source_ids": [
+          "6c7ce739-89aa-43b4-8a51-977c9bc0b2a6",
+          "65edf41c-dc72-4a81-93e2-c409ed89826d",
+          "44e29094-44e9-4686-835b-5d7888c1e59c"
+        ],
+        "type": "world",
+        "occurred_at": "2026-11-14T06:58:00.030000+00:00",
+        "tags": [
+          "service:smoke-cd1c53",
+          "engineer:synthetic-smoke-engineer",
+          "kind:incident"
+        ],
+        "context": "resolved incident postmortem for smoke-cd1c53",
+        "document_id": "INCIDENTIQ-LEARNING-35772d0611",
+        "metadata": {
+          "incident_id": "INCIDENTIQ-LEARNING-35772d0611",
+          "service": "smoke-cd1c53",
+          "kind": "incident",
+          "environment": "production",
+          "severity": "SEV2",
+          "status": "verified",
+          "source": "engineer-feedback",
+          "outcome": "Verified recovered: error rate and pool usage baseline"
+        },
+        "days_ago": 0,
+        "validation": {
+          "service_relevance": "different",
+          "environment_relevance": "match",
+          "resolution_status": "verified",
+          "warnings": [
+            "Different service: potentially related dependency only"
+          ],
+          "contradictions": "Not automatically resolved; compare evidence, dates and versions before applying advice",
+          "eligible_for_reasoning": true
+        }
+      },
+      {
+        "text": "The smoke-orders production service experienced database connection timeouts due to a session leak filling the connection pool. | When: 2026-11-14 | Where: production",
+        "id": "20c5758b-5c45-408a-a983-11bfb61f6ce9",
+        "source_ids": [
+          "20c5758b-5c45-408a-a983-11bfb61f6ce9"
+        ],
+        "type": "world",
+        "occurred_at": "2026-11-14T06:43:47.122000+00:00",
+        "tags": [
+          "synthetic:true",
+          "service:smoke-orders",
+          "kind:incident"
+        ],
+        "context": "synthetic verified connectivity test; not a real production incident",
+        "document_id": "INCIDENTIQ-LIVE-SMOKE-f00030243ee7",
+        "metadata": {
+          "incident_id": "INCIDENTIQ-LIVE-SMOKE-f00030243ee7",
+          "kind": "incident",
+          "service": "smoke-orders",
+          "status": "verified",
+          "environment": "production"
+        },
+        "days_ago": 0,
+        "validation": {
+          "service_relevance": "different",
+          "environment_relevance": "match",
+          "resolution_status": "verified",
+          "warnings": [
+            "Different service: potentially related dependency only"
+          ],
+          "contradictions": "Not automatically resolved; compare evidence, dates and versions before applying advice",
+          "eligible_for_reasoning": true
+        }
+      },
+      {
+        "text": "The root cause of the incident was leaked database sessions that were not released in the exception handler. | When: 2026-11-14T12:13:00+05:30 | Where: production",
+        "id": "c5d95e3d-877d-4af0-a674-beb8352df37e",
+        "source_ids": [
+          "c5d95e3d-877d-4af0-a674-beb8352df37e"
+        ],
+        "type": "world",
+        "occurred_at": "2026-11-14T06:43:00.010000+00:00",
+        "tags": [
+          "engineer:synthetic-smoke-engineer",
+          "service:smoke-596927",
+          "kind:incident"
+        ],
+        "context": "resolved incident postmortem for smoke-596927",
+        "document_id": "INCIDENTIQ-LEARNING-0648ba9fe1",
+        "metadata": {
+          "incident_id": "INCIDENTIQ-LEARNING-0648ba9fe1",
+          "service": "smoke-596927",
+          "kind": "incident",
+          "environment": "production",
+          "severity": "SEV2",
+          "status": "verified",
+          "source": "engineer-feedback",
+          "outcome": "Verified recovered: error rate and pool usage baseline"
+        },
+        "days_ago": 0,
+        "validation": {
+          "service_relevance": "different",
+          "environment_relevance": "match",
+          "resolution_status": "verified",
+          "warnings": [
+            "Different service: potentially related dependency only"
+          ],
+          "contradictions": "Not automatically resolved; compare evidence, dates and versions before applying advice",
+          "eligible_for_reasoning": true
+        }
+      },
+      {
+        "text": "The incident was resolved by adding a finally block to release pooled sessions. | When: 2026-11-14 | Where: production | Previous attempts to restart the service only provided temporary relief.\nIncident INCIDENTIQ-HTTP-98bc1f75 occurred on service qa-http-f1f51c due to connection timeouts caused by a full orders database pool. | When: 2026-11-14 | Where: production | Involving: Synthetic QA (on-call) | Missing connection close on exception paths.",
+        "id": "85896d72-4ddf-4e04-83c6-0165c974486a",
+        "source_ids": [
+          "85896d72-4ddf-4e04-83c6-0165c974486a",
+          "26d029c2-0f34-4d09-9b63-8d033d95b444"
+        ],
+        "type": "world",
+        "occurred_at": "2026-11-14T06:38:57.010000+00:00",
+        "tags": [
+          "kind:incident",
+          "engineer:synthetic-qa",
+          "service:qa-http-f1f51c"
+        ],
+        "context": "resolved incident postmortem for qa-http-f1f51c",
+        "document_id": "INCIDENTIQ-HTTP-98bc1f75",
+        "metadata": {
+          "incident_id": "INCIDENTIQ-HTTP-98bc1f75",
+          "service": "qa-http-f1f51c",
+          "kind": "incident",
+          "environment": "production",
+          "severity": "SEV2",
+          "status": "verified",
+          "source": "engineer-feedback",
+          "outcome": "Verified error rate zero and pool idle connections restored for 15 minutes"
+        },
+        "days_ago": 0,
+        "validation": {
+          "service_relevance": "different",
+          "environment_relevance": "match",
+          "resolution_status": "verified",
+          "warnings": [
+            "Different service: potentially related dependency only"
+          ],
+          "contradictions": "Not automatically resolved; compare evidence, dates and versions before applying advice",
+          "eligible_for_reasoning": true
+        }
+      },
+      {
+        "text": "Incident INCIDENTIQ-LEARNING-8c9025f995 occurred on service smoke-590126 due to database pool timeouts caused by leaked sessions. | When: 2026-11-14 | Where: production | Involving: Synthetic smoke engineer | Sessions were not released in the exception handler.",
+        "id": "455822ca-b015-4fb8-9d02-e02c4f4b4af5",
+        "source_ids": [
+          "455822ca-b015-4fb8-9d02-e02c4f4b4af5"
+        ],
+        "type": "world",
+        "occurred_at": "2026-11-14T06:37:00+00:00",
+        "tags": [
+          "service:smoke-590126",
+          "engineer:synthetic-smoke-engineer",
+          "kind:incident"
+        ],
+        "context": "resolved incident postmortem for smoke-590126",
+        "document_id": "INCIDENTIQ-LEARNING-8c9025f995",
+        "metadata": {
+          "incident_id": "INCIDENTIQ-LEARNING-8c9025f995",
+          "service": "smoke-590126",
+          "kind": "incident",
+          "environment": "production",
+          "severity": "SEV2",
+          "status": "verified",
+          "source": "engineer-feedback",
+          "outcome": "Verified recovered: error rate and pool usage baseline"
+        },
+        "days_ago": 0,
+        "validation": {
+          "service_relevance": "different",
+          "environment_relevance": "match",
+          "resolution_status": "verified",
+          "warnings": [
+            "Different service: potentially related dependency only"
+          ],
+          "contradictions": "Not automatically resolved; compare evidence, dates and versions before applying advice",
+          "eligible_for_reasoning": true
+        }
+      },
+      {
+        "text": "The smoke-orders production service experienced database connection timeouts due to a session leak filling the connection pool. | When: 2026-11-14 | Where: production environment | Unreleased sessions caused the pool to fill.",
+        "id": "12e0e082-a730-4046-867b-3acfa0fc78af",
+        "source_ids": [
+          "12e0e082-a730-4046-867b-3acfa0fc78af"
+        ],
+        "type": "world",
+        "occurred_at": "2026-11-14T00:00:00+00:00",
+        "tags": [
+          "synthetic:true",
+          "service:smoke-orders",
+          "kind:incident"
+        ],
+        "context": "synthetic verified connectivity test; not a real production incident",
+        "document_id": "INCIDENTIQ-LIVE-SMOKE-df181355e0a3",
+        "metadata": {
+          "incident_id": "INCIDENTIQ-LIVE-SMOKE-df181355e0a3",
+          "kind": "incident",
+          "service": "smoke-orders",
+          "status": "verified",
+          "environment": "production"
+        },
+        "days_ago": 0,
+        "validation": {
+          "service_relevance": "different",
+          "environment_relevance": "match",
+          "resolution_status": "verified",
+          "warnings": [
+            "Different service: potentially related dependency only"
+          ],
+          "contradictions": "Not automatically resolved; compare evidence, dates and versions before applying advice",
+          "eligible_for_reasoning": true
+        }
+      },
+      {
+        "text": "Production incident reported for service 'browser-orders-debug' involving database connection pool exhaustion with 40 active and 0 idle connections. | When: 2026-11-14 | Where: production | Incident intake following an exception-handler deployment.\nDatabase connection pool exhaustion in browser-orders-debug service in production, with active connections at 40 and 0 idle. | When: 2026-11-14 | Where: production\nIncident occurred immediately following the deployment of the exception-handler service. | When: 2026-11-14 | Where: production",
+        "id": "a70bde9e-4ebb-47a3-83b3-e68feae0fe6c",
+        "source_ids": [
+          "a70bde9e-4ebb-47a3-83b3-e68feae0fe6c",
+          "a76f80d5-592d-4cbd-bab2-eeb4f629d763",
+          "fd16227a-dc36-4369-b52a-ba339103e43c"
+        ],
+        "type": "world",
+        "occurred_at": "2026-11-14T07:14:47.843000+00:00",
+        "tags": [
+          "kind:incident_intake",
+          "service:browser-orders-debug"
+        ],
+        "context": "Unverified incident intake, NOT a confirmed root cause or resolution",
+        "document_id": "IQ-d5e97ebd9456-intake",
+        "metadata": {
+          "service": "browser-orders-debug",
+          "environment": "production",
+          "status": "unverified",
+          "conversation_id": "IQ-d5e97ebd9456",
+          "kind": "incident_intake"
+        },
+        "days_ago": 0,
+        "validation": {
+          "service_relevance": "different",
+          "environment_relevance": "match",
+          "resolution_status": "unverified",
+          "warnings": [
+            "Different service: potentially related dependency only",
+            "Resolution not verified by structured source metadata"
+          ],
+          "contradictions": "Not automatically resolved; compare evidence, dates and versions before applying advice",
+          "eligible_for_reasoning": false
+        }
+      },
+      {
+        "text": "The browser-orders-debug service in production is experiencing connection pool exhaustion, with failed remediation attempts identified by IDs 839602f4-9857-499b-aeaa-e476fcb3a554, 6c7ce739-89aa-43b4-8a51-977c9bc0b2a6, and 7f3f23ec-a628-428b-9972-d63baccec737. | When: 2026-11-14 | Where: production\nThe browser-orders-debug service in production is experiencing a potential connection leak where pooled DB sessions are not released on error paths following an exception-handler deployment. | When: 2026-11-14 | Where: production | Hypothesis based on symptoms of pool exhaustion (active connections reached limit, idle=0) occurring immediately after deployment.\nHypothesis: A traffic spike coincident with the deployment caused rapid connection-pool exhaustion. | Where: production | Low confidence; speculative due to lack of request-rate data.",
+        "id": "a8fa40f2-1e4d-4c2c-bfbe-4270d23da484",
+        "source_ids": [
+          "a8fa40f2-1e4d-4c2c-bfbe-4270d23da484",
+          "b95a382b-ffd6-4e20-b47c-376c0bc8b853",
+          "f640d990-2a8c-4728-a150-d121bdbe45d2"
+        ],
+        "type": "world",
+        "occurred_at": "2026-11-14T07:14:47.843000+00:00",
+        "tags": [
+          "kind:investigation_advice",
+          "service:browser-orders-debug"
+        ],
+        "context": "Unverified investigation advice, NOT a successful fix",
+        "document_id": "IQ-d5e97ebd9456-advice",
+        "metadata": {
+          "service": "browser-orders-debug",
+          "environment": "production",
+          "status": "unverified",
+          "conversation_id": "IQ-d5e97ebd9456",
+          "kind": "investigation_advice"
+        },
+        "days_ago": 0,
+        "validation": {
+          "service_relevance": "different",
+          "environment_relevance": "match",
+          "resolution_status": "unverified",
+          "warnings": [
+            "Different service: potentially related dependency only",
+            "Resolution not verified by structured source metadata"
+          ],
+          "contradictions": "Not automatically resolved; compare evidence, dates and versions before applying advice",
+          "eligible_for_reasoning": false
+        }
+      },
+      {
+        "text": "The gate-orders-be2334 service is experiencing database pool timeouts with 40 active connections and 0 idle connections. | When: 2026-11-14T12:31:00+05:30 | Where: gate-orders-be2334 | Involving: Synthetic Gate (engineer)\nHypothesis: A connection leak in an exception handling path is exhausting the database connection pool in gate-orders-be2334. | When: 2026-11-14T12:31:00+05:30 | Where: gate-orders-be2334 | Involving: IncidentIQ (AI agent)",
+        "id": "bc2dfa58-56b3-4d6b-a99a-d6c1f367263a",
+        "source_ids": [
+          "bc2dfa58-56b3-4d6b-a99a-d6c1f367263a",
+          "0c288b39-196c-4966-ab2c-fa321f638128"
+        ],
+        "type": "world",
+        "occurred_at": "2026-11-14T07:01:00+00:00",
+        "tags": [
+          "kind:advice",
+          "service:gate-orders-be2334",
+          "engineer:synthetic-gate"
+        ],
+        "context": "advice given by the on-call agent (not yet confirmed as the fix)",
+        "document_id": "3789509a-4535-438a-bc98-833a2a7ece7b",
+        "metadata": {
+          "kind": "advice",
+          "service": "gate-orders-be2334",
+          "engineer": "Synthetic Gate"
+        },
+        "days_ago": 0,
+        "validation": {
+          "service_relevance": "different",
+          "environment_relevance": "unknown",
+          "resolution_status": "unverified-advice",
+          "warnings": [
+            "Historical environment unknown",
+            "Different service: potentially related dependency only",
+            "Resolution not verified by structured source metadata",
+            "Unverified agent advice; never treat as successful remediation"
+          ],
+          "contradictions": "Not automatically resolved; compare evidence, dates and versions before applying advice",
+          "eligible_for_reasoning": false
+        }
+      },
+      {
+        "text": "The gate-inventory-be2334 service is experiencing database connection pool exhaustion with 40/40 connections busy and zero idle sessions. | When: 2026-11-14 | Where: gate-inventory-be2334 | Involving: Synthetic Gate (engineer)\nIncidentIQ hypothesized that recent error-handling changes introduced a connection leak, causing the pool exhaustion. | When: 2026-11-14 | Where: gate-inventory-be2334 | Involving: IncidentIQ, Synthetic Gate",
+        "id": "f9bc6d1d-fcec-4438-84e3-9ea7b3af6e66",
+        "source_ids": [
+          "f9bc6d1d-fcec-4438-84e3-9ea7b3af6e66",
+          "fd3c0d48-403a-46e4-a703-e61c59ac8938"
+        ],
+        "type": "world",
+        "occurred_at": "2026-11-14T07:01:00+00:00",
+        "tags": [
+          "kind:advice",
+          "engineer:synthetic-gate",
+          "service:gate-inventory-be2334"
+        ],
+        "context": "advice given by the on-call agent (not yet confirmed as the fix)",
+        "document_id": "92f5bdfc-296c-4270-ba95-c6a060bb508a",
+        "metadata": {
+          "kind": "advice",
+          "service": "gate-inventory-be2334",
+          "engineer": "Synthetic Gate"
+        },
+        "days_ago": 0,
+        "validation": {
+          "service_relevance": "different",
+          "environment_relevance": "unknown",
+          "resolution_status": "unverified-advice",
+          "warnings": [
+            "Historical environment unknown",
+            "Different service: potentially related dependency only",
+            "Resolution not verified by structured source metadata",
+            "Unverified agent advice; never treat as successful remediation"
+          ],
+          "contradictions": "Not automatically resolved; compare evidence, dates and versions before applying advice",
+          "eligible_for_reasoning": false
+        }
+      },
+      {
+        "text": "Service smoke-cd1c53 is experiencing database connection timeouts with the active connection pool full and idle connections at zero. | When: 2026-11-14 | Involving: Synthetic smoke engineer\nHypothesis: Application code in smoke-cd1c53 is leaking database sessions, causing pool exhaustion. | When: 2026-11-14 | Involving: IncidentIQ | Historical incidents with identical symptoms were resolved by ensuring sessions are closed in a finally block.",
+        "id": "b9ea1aca-d655-485a-8b53-1295dedd6edd",
+        "source_ids": [
+          "b9ea1aca-d655-485a-8b53-1295dedd6edd",
+          "422f0225-0ae3-482f-80ed-b222eb11f450"
+        ],
+        "type": "world",
+        "occurred_at": "2026-11-14T06:58:00+00:00",
+        "tags": [
+          "engineer:synthetic-smoke-engineer",
+          "service:smoke-cd1c53",
+          "kind:advice"
+        ],
+        "context": "advice given by the on-call agent (not yet confirmed as the fix)",
+        "document_id": "1494f531-69c1-4acf-beb7-59addcba4d88",
+        "metadata": {
+          "kind": "advice",
+          "service": "smoke-cd1c53",
+          "engineer": "Synthetic smoke engineer"
+        },
+        "days_ago": 0,
+        "validation": {
+          "service_relevance": "different",
+          "environment_relevance": "unknown",
+          "resolution_status": "unverified-advice",
+          "warnings": [
+            "Historical environment unknown",
+            "Different service: potentially related dependency only",
+            "Resolution not verified by structured source metadata",
+            "Unverified agent advice; never treat as successful remediation"
+          ],
+          "contradictions": "Not automatically resolved; compare evidence, dates and versions before applying advice",
+          "eligible_for_reasoning": false
+        }
+      },
+      {
+        "text": "Service qa-http-f1f51c experienced database connection timeouts with 40 active and 0 idle connections following a deployment of new exception handling code. | When: 2026-11-14 | Where: qa-http-f1f51c | Involving: Synthetic QA\nHypothesis: The new exception handling code fails to close database connections on exception paths, leading to connection pool exhaustion. | When: 2026-11-14 | Where: qa-http-f1f51c | Involving: IncidentIQ | Symptoms match historical incident INCIDENTIQ-HTTP-98bc1f75.",
+        "id": "2036aae0-3400-4af5-b554-3a04e8199d0e",
+        "source_ids": [
+          "2036aae0-3400-4af5-b554-3a04e8199d0e",
+          "381d3d1b-882e-46a1-8ebc-b6e3ffbc329b"
+        ],
+        "type": "world",
+        "occurred_at": "2026-11-14T06:47:00+00:00",
+        "tags": [
+          "service:qa-http-f1f51c",
+          "kind:advice",
+          "engineer:synthetic-qa"
+        ],
+        "context": "advice given by the on-call agent (not yet confirmed as the fix)",
+        "document_id": "96af68c0-b674-42d0-be0a-480ce4a84544",
+        "metadata": {
+          "kind": "advice",
+          "service": "qa-http-f1f51c",
+          "engineer": "Synthetic QA"
+        },
+        "days_ago": 0,
+        "validation": {
+          "service_relevance": "different",
+          "environment_relevance": "unknown",
+          "resolution_status": "unverified-advice",
+          "warnings": [
+            "Historical environment unknown",
+            "Different service: potentially related dependency only",
+            "Resolution not verified by structured source metadata",
+            "Unverified agent advice; never treat as successful remediation"
+          ],
+          "contradictions": "Not automatically resolved; compare evidence, dates and versions before applying advice",
+          "eligible_for_reasoning": false
+        }
+      },
+      {
+        "text": "Service qa-http-f1f51c is experiencing database connection timeouts with 40 active and 0 idle connections following an exception handler deployment. | When: 2026-11-14 | Where: qa-http-f1f51c | Involving: Synthetic QA\nHypothesis: The new exception handler fails to close database connections on error, causing connection pool exhaustion. | When: 2026-11-14 | Where: qa-http-f1f51c | Involving: IncidentIQ",
+        "id": "e3fa763d-23e8-4011-a002-2dd4f9ac8688",
+        "source_ids": [
+          "e3fa763d-23e8-4011-a002-2dd4f9ac8688",
+          "25e14392-c1f4-4ee7-8be1-e5beff80d0be"
+        ],
+        "type": "world",
+        "occurred_at": "2026-11-14T06:46:00+00:00",
+        "tags": [
+          "kind:advice",
+          "engineer:synthetic-qa",
+          "service:qa-http-f1f51c"
+        ],
+        "context": "advice given by the on-call agent (not yet confirmed as the fix)",
+        "document_id": "c00369d0-9538-452f-a413-c6854e302f86",
+        "metadata": {
+          "kind": "advice",
+          "service": "qa-http-f1f51c",
+          "engineer": "Synthetic QA"
+        },
+        "days_ago": 0,
+        "validation": {
+          "service_relevance": "different",
+          "environment_relevance": "unknown",
+          "resolution_status": "unverified-advice",
+          "warnings": [
+            "Historical environment unknown",
+            "Different service: potentially related dependency only",
+            "Resolution not verified by structured source metadata",
+            "Unverified agent advice; never treat as successful remediation"
+          ],
+          "contradictions": "Not automatically resolved; compare evidence, dates and versions before applying advice",
+          "eligible_for_reasoning": false
+        }
+      },
+      {
+        "text": "Hypothesis: Leaked database sessions not closed in exception paths are causing connection pool exhaustion in smoke-596927. | Involving: IncidentIQ | Based on current symptoms and historical incident INCIDENTIQ-LEARNING-0648ba9fe1.\nService smoke-596927 is experiencing database connection timeouts with the active connection pool full and idle connections at zero. | When: 2026-11-14 | Involving: Synthetic smoke engineer",
+        "id": "b706d726-a20c-4a71-ba49-ac6718070e54",
+        "source_ids": [
+          "b706d726-a20c-4a71-ba49-ac6718070e54",
+          "f06c5d71-4c6f-453e-a8b9-cde7ede5a36c"
+        ],
+        "type": "world",
+        "occurred_at": "2026-11-14T06:44:01.321000+00:00",
+        "tags": [
+          "engineer:synthetic-smoke-engineer",
+          "kind:advice",
+          "service:smoke-596927"
+        ],
+        "context": "advice given by the on-call agent (not yet confirmed as the fix)",
+        "document_id": "f9346358-cbc9-4079-bc4d-df454529f54a",
+        "metadata": {
+          "kind": "advice",
+          "service": "smoke-596927",
+          "engineer": "Synthetic smoke engineer"
+        },
+        "days_ago": 0,
+        "validation": {
+          "service_relevance": "different",
+          "environment_relevance": "unknown",
+          "resolution_status": "unverified-advice",
+          "warnings": [
+            "Historical environment unknown",
+            "Different service: potentially related dependency only",
+            "Resolution not verified by structured source metadata",
+            "Unverified agent advice; never treat as successful remediation"
+          ],
+          "contradictions": "Not automatically resolved; compare evidence, dates and versions before applying advice",
+          "eligible_for_reasoning": false
+        }
+      },
+      {
+        "text": "The high-confidence hypothesis is that a recent deployment introduced an exception handling bug causing a database session leak, which fills the connection pool and results in timeouts. | When: 2026-11-14 | Where: smoke-orders service | Involving: IncidentIQ\nIncidentIQ advised the on-call engineer regarding a smoke-orders service incident where database requests are timing out due to a connection pool at capacity (active=40, idle=0). | When: 2026-11-14 | Where: smoke-orders service | Involving: IncidentIQ, On-call engineer | Synthetic browser tests reported timeouts following a deployment affecting exception handling.",
+        "id": "94da38a7-503a-444b-9390-c621ef9e7a2b",
+        "source_ids": [
+          "94da38a7-503a-444b-9390-c621ef9e7a2b",
+          "92049bb6-f1e7-4217-863e-824e69f95913"
+        ],
+        "type": "world",
+        "occurred_at": "2026-11-14T06:39:36.579000+00:00",
+        "tags": [
+          "kind:advice",
+          "service:smoke-orders",
+          "engineer:on-call-engineer"
+        ],
+        "context": "advice given by the on-call agent (not yet confirmed as the fix)",
+        "document_id": "622f60fd-97d1-43d0-8665-d23adc62b4cb",
+        "metadata": {
+          "kind": "advice",
+          "service": "smoke-orders",
+          "engineer": "On-call engineer"
+        },
+        "days_ago": 0,
+        "validation": {
+          "service_relevance": "different",
+          "environment_relevance": "unknown",
+          "resolution_status": "unverified-advice",
+          "warnings": [
+            "Historical environment unknown",
+            "Different service: potentially related dependency only",
+            "Resolution not verified by structured source metadata",
+            "Unverified agent advice; never treat as successful remediation"
+          ],
+          "contradictions": "Not automatically resolved; compare evidence, dates and versions before applying advice",
+          "eligible_for_reasoning": false
+        }
+      },
+      {
+        "text": "The service qa-http-f1f51c is experiencing database request timeouts due to connection pool exhaustion, with 40 active and 0 idle connections. | When: 2026-11-14 | Where: qa-http-f1f51c | Involving: IncidentIQ, Synthetic QA\nIncidentIQ hypothesizes that a newly deployed error handler fails to close database connections on exception paths, causing pool exhaustion. | When: 2026-11-14 | Where: qa-http-f1f51c | Involving: IncidentIQ\nHistorical incident INCIDENTIQ-HTTP-98bc1f75 on service qa-http-f1f51c was caused by missing connection close on exception paths, resulting in identical pool exhaustion. | Where: qa-http-f1f51c",
+        "id": "cdebcfdd-1360-4733-be2f-43eddb397d3e",
+        "source_ids": [
+          "cdebcfdd-1360-4733-be2f-43eddb397d3e",
+          "72045a36-5d82-4848-bdaf-6d75013d44ef",
+          "b3c75e6f-8ead-40b5-8db5-357156690dcf"
+        ],
+        "type": "world",
+        "occurred_at": "2026-11-14T06:39:00+00:00",
+        "tags": [
+          "service:qa-http-f1f51c",
+          "kind:advice",
+          "engineer:synthetic-qa"
+        ],
+        "context": "advice given by the on-call agent (not yet confirmed as the fix)",
+        "document_id": "c5cddcd9-339c-4235-a820-01ed16c7ff3b",
+        "metadata": {
+          "kind": "advice",
+          "service": "qa-http-f1f51c",
+          "engineer": "Synthetic QA"
+        },
+        "days_ago": 0,
+        "validation": {
+          "service_relevance": "different",
+          "environment_relevance": "unknown",
+          "resolution_status": "unverified-advice",
+          "warnings": [
+            "Historical environment unknown",
+            "Different service: potentially related dependency only",
+            "Resolution not verified by structured source metadata",
+            "Unverified agent advice; never treat as successful remediation"
+          ],
+          "contradictions": "Not automatically resolved; compare evidence, dates and versions before applying advice",
+          "eligible_for_reasoning": false
+        }
+      },
+      {
+        "text": "Hypothesis: Connection leak due to unclosed sessions in exception handling is exhausting the connection pool. | Involving: IncidentIQ | High confidence based on historical incident INCIDENTIQ-LEARNING-8c9025f995.",
+        "id": "79d32b18-a299-46dc-b0ab-0c1e6772245d",
+        "source_ids": [
+          "79d32b18-a299-46dc-b0ab-0c1e6772245d"
+        ],
+        "type": "world",
+        "occurred_at": "2026-11-14T06:37:05.753000+00:00",
+        "tags": [
+          "service:smoke-590126",
+          "engineer:synthetic-smoke-engineer",
+          "kind:advice"
+        ],
+        "context": "advice given by the on-call agent (not yet confirmed as the fix)",
+        "document_id": "cb7387ab-5daf-4cac-8048-872384425454",
+        "metadata": {
+          "kind": "advice",
+          "service": "smoke-590126",
+          "engineer": "Synthetic smoke engineer"
+        },
+        "days_ago": 0,
+        "validation": {
+          "service_relevance": "different",
+          "environment_relevance": "unknown",
+          "resolution_status": "unverified-advice",
+          "warnings": [
+            "Historical environment unknown",
+            "Different service: potentially related dependency only",
+            "Resolution not verified by structured source metadata",
+            "Unverified agent advice; never treat as successful remediation"
+          ],
+          "contradictions": "Not automatically resolved; compare evidence, dates and versions before applying advice",
+          "eligible_for_reasoning": false
+        }
+      }
+    ],
+    "preferences": [],
+    "tool_trace": [
+      {
+        "event": "report_repair_attempt",
+        "validation": [
+          {
+            "field": "resolution_verification",
+            "type": "too_short"
+          }
+        ]
+      },
+      {
+        "event": "api_error",
+        "model": "openai/gpt-oss-120b",
+        "detail": "APIStatusError: connection, SDK or provider failure (HTTP 413)"
+      }
+    ],
+    "memory_errors": [],
+    "backend": {
+      "memory": "hindsight",
+      "llm": "groq",
+      "model": "openai/gpt-oss-20b"
+    }
+  },
+  "conversation_id": "IQ-eeb85f7dc8c5",
+  "resolution": {
+    "retained": 2,
+    "incident_id": "IQ-eeb85f7dc8c5",
+    "backend": "hindsight",
+    "status": "engineer-verified"
+  }
+}

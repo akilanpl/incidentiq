@@ -21,3 +21,11 @@ dist/
 Thumbs.db
 .idea/
 .vscode/
+
+# Local operator history and atomic write files
+data/investigations*.json
+data/.history-*
+data/session-revocations.json
+data/.sessions-*
+data/users.json
+data/.users-*

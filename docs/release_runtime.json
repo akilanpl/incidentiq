@@ -1,0 +1,62 @@
+{
+  "offline": false,
+  "authentication": "PASS unauthenticated blocked; existing local admin session accepted",
+  "telemetry": {
+    "verification_status": "TELEMETRY_NOT_CONFIGURED",
+    "source": "prometheus",
+    "checks": [],
+    "checked_at": null
+  },
+  "providers": {
+    "hindsight": {
+      "status": "connected",
+      "last_operation": "get_bank_config",
+      "last_success_at": "2026-11-14T08:03:31.709143+00:00",
+      "last_duration_ms": 473.6,
+      "error": null,
+      "last_recall_ms": null,
+      "last_retention_at": null,
+      "last_inference_status": null,
+      "last_inference_ms": null,
+      "operation_counts": {
+        "get_bank_config": 1
+      },
+      "latest_request_usage": null,
+      "app_observed_tokens": 0,
+      "rate_limit_headers": {},
+      "usage_scope": "App-observed calls in this process; response rate limits may be shared at project/organisation scope; not account credit balance",
+      "checked_at": "2026-11-14T08:03:31.709143+00:00",
+      "bank_id": "incidentiq-sre",
+      "backend": "hindsight"
+    },
+    "groq": {
+      "status": "connected",
+      "last_operation": "models",
+      "last_success_at": "2026-11-14T08:03:32.159608+00:00",
+      "last_duration_ms": 450.4,
+      "error": null,
+      "last_recall_ms": null,
+      "last_retention_at": null,
+      "last_inference_status": null,
+      "last_inference_ms": null,
+      "operation_counts": {
+        "models": 1
+      },
+      "latest_request_usage": null,
+      "app_observed_tokens": 0,
+      "rate_limit_headers": {},
+      "usage_scope": "App-observed calls in this process; response rate limits may be shared at project/organisation scope; not account credit balance",
+      "checked_at": "2026-11-14T08:03:32.159608+00:00",
+      "model": "openai/gpt-oss-120b",
+      "vision_model": "qwen/qwen3.8-27b",
+      "fallback_model": "openai/gpt-oss-20b",
+      "backend": "groq"
+    },
+    "prometheus": {
+      "verification_status": "TELEMETRY_NOT_CONFIGURED",
+      "source": "prometheus",
+      "checks": [],
+      "checked_at": null
+    }
+  }
+}

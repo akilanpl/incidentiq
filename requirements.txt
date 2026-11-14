@@ -9,3 +9,7 @@ python-dotenv>=1.0
 # Tests
 pytest>=8
 httpx>=0.27                  # FastAPI TestClient
+
+Pillow>=11  # in-memory screenshot content validation and metadata removal
+
+itsdangerous>=2.2

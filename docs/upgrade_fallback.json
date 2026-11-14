@@ -1,0 +1,47 @@
+{
+  "status": "PASS real fallback JSON understanding inference",
+  "timestamp": "2026-11-14T07:31:49.965679+00:00",
+  "configured_primary_available": true,
+  "configured_fallback_available": true,
+  "actual_model": "openai/gpt-oss-20b",
+  "understanding": {
+    "incident_summary": "Database pool timeout observed during synthetic fallback check",
+    "service": "fallback-verification",
+    "environment": "production",
+    "severity": "SEV2",
+    "error_signatures": [
+      "database pool timeout active=40 idle=0"
+    ],
+    "observed_symptoms": [
+      "database pool timeout during synthetic fallback check"
+    ],
+    "affected_components": [
+      "database connection pool"
+    ],
+    "possible_dependencies": [
+      "database service",
+      "connection pool library",
+      "query executor"
+    ],
+    "recent_changes": [],
+    "known_facts": [
+      "Synthetic final fallback check reported database pool timeout with active connections 40 and idle 0"
+    ],
+    "suspected_causes": [
+      "Connection pool exhaustion due to high load or long-running queries",
+      "Misconfigured pool size or timeout settings",
+      "Potential resource leak in application code"
+    ],
+    "missing_information": [
+      "Timing of the timeout event",
+      "Recent deployments or configuration changes",
+      "Historical performance metrics for the pool",
+      "Impact on other services"
+    ],
+    "retrieval_queries": [
+      "database pool timeout active=40 idle=0",
+      "database pool timeout during synthetic fallback check",
+      "connection pool exhaustion root cause patterns, long-running queries, resource leak"
+    ]
+  }
+}
