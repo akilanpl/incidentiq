@@ -138,3 +138,16 @@ def test_setup_operator_updates_existing_account(tmp_path,monkeypatch):
  assert b.check_password('operator','replacement-password')
  assert not b.check_password('operator','original-password')
  assert b.check_password('reader','reader-password')
+
+
+def test_demo_metrics_cannot_verify_production_recovery():
+ v=telemetry({'up':1,'errors':.002,'pool':.35});v.demo=True
+ result=v.snapshot()
+ assert result['demo_checks_passed'] is True
+ assert result['verification_status']=='NOT_VERIFIED' and result['demo'] is True
+
+
+def test_offline_app_does_not_connect_to_configured_demo_telemetry(tmp_path):
+ c,a,app=make(tmp_path)
+ assert app.state.verifier.url==''
+ assert app.state.verifier.snapshot()['verification_status']=='TELEMETRY_NOT_CONFIGURED'

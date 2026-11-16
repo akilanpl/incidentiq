@@ -4,10 +4,11 @@
 
 Every incident leaves knowledge. IncidentIQ remembers.
 
-A local engineering workspace built on [Recurrence](https://github.com/francisreubenr-rvu/recurrence),
-FastAPI, Groq and the official `hindsight-client==1.2.0`. Original authors: Aryan Dubey, Francis Reuben R,
-Gopreeth Saharsh and Rohith AD. The original [MIT LICENSE](LICENSE) is unchanged. The original README is
-preserved in [docs/RECURRENCE_UPSTREAM.md](docs/RECURRENCE_UPSTREAM.md).
+IncidentIQ is an AI incident investigation workspace for SRE, DevOps and backend engineering teams.
+It combines structured incident understanding, persistent operational memory, evidence-backed recommendations,
+and engineer-reviewed feedback in a lightweight local application.
+
+Built with Python, FastAPI, vanilla JavaScript, Groq, Hindsight Cloud and optional Prometheus telemetry.
 
 ## Run this checkout
 
@@ -177,3 +178,11 @@ Limitations: local prototype identity, no enterprise identity/RBAC or compliance
 redaction, manual pixel privacy review, no real production telemetry verification, and synthetic incident tests
 rather than a diagnostic-accuracy benchmark. Installed Codex visual inspection was blocked by Computer Use;
 the IncidentIQ browser workspace itself was manually inspected on desktop and mobile.
+
+## License and acknowledgements
+
+MIT licensed. Includes work from [Recurrence](https://github.com/francisreubenr-rvu/recurrence) by Aryan Dubey, Francis Reuben R, Gopreeth Saharsh and Rohith AD. Copyright and permission notices are preserved in [LICENSE](LICENSE).
+
+## Local Prometheus demo
+
+See [demo/prometheus/README.md](demo/prometheus/README.md). The exporter exposes synthetic metrics only. With `PROMETHEUS_DEMO=1`, passing demo checks never establishes production recovery. Configuration is stored separately in ignored `.env.telemetry`.

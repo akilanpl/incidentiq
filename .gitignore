@@ -29,3 +29,10 @@ data/session-revocations.json
 data/.sessions-*
 data/users.json
 data/.users-*
+
+# Synthetic local telemetry runtime
+data/demo-telemetry.json
+data/demo-telemetry.tmp
+
+# Generated local demonstration artifacts
+outputs/

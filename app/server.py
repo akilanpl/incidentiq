@@ -115,7 +115,7 @@ def create_app(agent: RecurrenceAgent | None = None, settings: Settings | None =
     async def safe_validation(request,exc):
         return JSONResponse({'detail':[{'loc':e['loc'],'msg':e['msg'],'type':e['type']} for e in exc.errors()]},status_code=422)
 
-    verifier=TelemetryVerifier.from_env()
+    verifier=TelemetryVerifier() if settings.offline else TelemetryVerifier.from_env()
     app.state.verifier=verifier
     app.state.require_review=not settings.offline
     app.state.agent = agent
@@ -247,6 +247,7 @@ def create_app(agent: RecurrenceAgent | None = None, settings: Settings | None =
 
     @app.post('/api/providers/check')
     def check_providers():
+        if verifier.url and verifier.queries:verifier.snapshot()
         if settings.offline:return provider_status()
         try:agent.memory._call('get_bank_config',bank_id=settings.bank_id)
         except Exception:pass
